@@ -1,0 +1,19 @@
+# .github/workflows/sweep-stale-rides.yml
+name: Sweep Stale Rides
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit the sweep endpoint
+        env:
+          SWEEP_URL: ${{ secrets.STALE_SWEEP_URL }}
+          SWEEP_SECRET: ${{ secrets.STALE_SWEEP_SECRET }}
+        run: |
+          curl --fail-with-body -sS -X POST "$SWEEP_URL" \
+            -H "x-sweep-secret: $SWEEP_SECRET"

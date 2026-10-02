@@ -1,0 +1,279 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoCab - Sign Up</title>
+  <meta name="description" content="Sign up for GoCab as a rider or a driver">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <meta name="theme-color" content="#1d4ed8"/>
+
+  <!-- iOS Specific -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GoCab">
+  <link rel="apple-touch-icon" href="{% static 'assets/img/apple-touch-icon.png' %}" />
+
+  <!-- Android Specific -->
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <!-- Favicons -->
+  <link rel="icon" href="{% static 'assets/img/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'assets/img/apple-touch-icon.png' %}">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link href="{% static 'assets/css/become-a-driver.css' %}" rel="stylesheet" />
+  <style>
+    .role-toggle {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .role-toggle-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 10px;
+      border: 2px solid #e2e8f0;
+      background: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+    .role-toggle-btn.active {
+      border-color: #1d4ed8;
+      background: #1d4ed8;
+      color: #fff;
+    }
+    [data-role-section="driver"] {
+      display: none;
+    }
+    body[data-active-role="driver"] [data-role-section="driver"] {
+      display: block;
+    }
+    body[data-active-role="driver"] [data-role-section="rider"] {
+      display: none;
+    }
+  </style>
+</head>
+
+<body style="background-image: url('{% static 'assets/img/cool-motorcycle-studio.jpg' %}'); background-size: 200px; background-repeat: repeat;" data-active-role="{{ role }}">
+  <div class="pwa-container">
+    <div class="pwa-header">
+      <div class="logo">
+        <h1>GoCab</h1>
+      </div>
+      <h2>Create Your Account</h2>
+      <p>Ride when you need it, drive when you want to earn</p>
+    </div>
+
+    <div class="pwa-form-section">
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+        <p class="{{ message.tags }}">{{ message }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="role-toggle">
+        <button type="button" class="role-toggle-btn" data-role-btn="rider">I want to ride</button>
+        <button type="button" class="role-toggle-btn" data-role-btn="driver">I want to drive</button>
+      </div>
+
+      <form class="signup-form" action="{% url 'signup' %}" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="role" id="role-input" value="{{ role }}">
+        {% if verified_token %}
+        <input type="hidden" name="verified_token" id="id_verified_token" value="{{ verified_token }}">
+        {% endif %}
+
+        <!-- Shared fields -->
+        <div class="form-section">
+          <h3>Your Details</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="id_full_name">Full Name</label>
+              <input type="text" id="id_full_name" name="full_name" required>
+            </div>
+            <div class="form-group">
+              <label for="id_email">Email Address</label>
+              <input
+                type="email" id="id_email" name="email" required
+                value="{{ prefill_email|default:'' }}"
+                {% if verified_token %}readonly{% endif %}
+              >
+              {% if verified_token %}<p class="location-status success">Email verified</p>{% endif %}
+            </div>
+            <div class="form-group">
+              <label for="id_phone_number">Phone Number</label>
+              <input type="tel" id="id_phone_number" name="phone_number" placeholder="08012345678" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rider-only -->
+        <div class="form-section" data-role-section="rider">
+          <h3>Rider Details</h3>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label for="id_address">Home Address</label>
+              <input type="text" id="id_address" name="address">
+            </div>
+          </div>
+        </div>
+
+        <!-- Driver-only -->
+        <div class="form-section" data-role-section="driver">
+          <h3>Personal &amp; Vehicle Information</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="id_date_of_birth">Date of Birth</label>
+              <input type="date" id="id_date_of_birth" name="date_of_birth">
+            </div>
+            <div class="form-group">
+              <label for="id_national_identification_number">National Identification Number</label>
+              <input type="text" id="id_national_identification_number" name="national_identification_number">
+            </div>
+            <div class="form-group">
+              <label for="id_vehicle_type">Vehicle Type</label>
+              <select id="id_vehicle_type" name="vehicle_type">
+                <option value="Bike">Bike</option>
+                <option value="Bicycle">Bicycle</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="id_vehicle_model">Vehicle Model</label>
+              <input type="text" id="id_vehicle_model" name="vehicle_model">
+            </div>
+            <div class="form-group">
+              <label for="id_license_plate">License Plate</label>
+              <input type="text" id="id_license_plate" name="license_plate">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section" data-role-section="driver">
+          <h3>Documents</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="id_drivers_license">Driver's License</label>
+              <input type="file" id="id_drivers_license" name="drivers_license">
+            </div>
+            <div class="form-group">
+              <label for="id_vehicle_insurance">Vehicle Insurance</label>
+              <input type="file" id="id_vehicle_insurance" name="vehicle_insurance">
+            </div>
+            <div class="form-group">
+              <label for="id_vehicle_registration">Vehicle Registration</label>
+              <input type="file" id="id_vehicle_registration" name="vehicle_registration">
+            </div>
+            <div class="form-group">
+              <label for="id_roadworthiness_certificate">Roadworthiness Certificate</label>
+              <input type="file" id="id_roadworthiness_certificate" name="roadworthiness_certificate">
+            </div>
+            <div class="form-group">
+              <label for="id_proof_of_residency">Proof of Residency</label>
+              <input type="file" id="id_proof_of_residency" name="proof_of_residency">
+            </div>
+            <div class="form-group">
+              <label for="id_passport_photo">Passport Photo</label>
+              <input type="file" id="id_passport_photo" name="passport_photo">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section" data-role-section="driver">
+          <h3>Banking Information</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="id_bank_name">Bank Name</label>
+              <input type="text" id="id_bank_name" name="bank_name">
+            </div>
+            <div class="form-group">
+              <label for="id_account_number">Account Number</label>
+              <input type="text" id="id_account_number" name="account_number" maxlength="10">
+            </div>
+            <div class="form-group">
+              <label for="id_account_holder_name">Account Holder's Name</label>
+              <input type="text" id="id_account_holder_name" name="account_holder_name">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section" data-role-section="driver" id="location-section-wrapper">
+          <h3>Current Location <span class="required-field">(Required)</span></h3>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <div class="location-section">
+                <button type="button" id="detect-location" class="location-btn">
+                  Detect My Location
+                </button>
+                <div id="location-status" class="location-status warning">
+                  Location detection required for driver registration
+                </div>
+                <div id="location-details" class="location-details" style="display: none;">
+                  <p><strong>Address:</strong> <span id="location-address">-</span></p>
+                  <p><strong>Coordinates:</strong> <span id="location-coords">-</span></p>
+                </div>
+              </div>
+              <input type="hidden" id="id_latitude" name="latitude">
+              <input type="hidden" id="id_longitude" name="longitude">
+              <input type="hidden" id="id_current_address" name="current_address">
+            </div>
+          </div>
+        </div>
+
+        <!-- Email verification (shared) — skipped when arriving from the
+             homepage with an already-verified email (verified_token above) -->
+        {% if not verified_token %}
+        <div class="form-section">
+          <h3>Verify Your Email</h3>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <button type="button" id="send-code-btn" class="location-btn">
+                Send Verification Code
+              </button>
+              <div id="code-status" class="location-status warning">
+                We'll email a 6-digit code to confirm your address.
+              </div>
+            </div>
+            <div class="form-group full-width" id="code-field-wrapper" style="display:none;">
+              <label for="id_code">Verification Code</label>
+              <input type="text" id="id_code" name="code" inputmode="numeric" maxlength="6" placeholder="6-digit code" autocomplete="one-time-code">
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="terms-checkbox">
+          <input type="checkbox" id="terms" name="terms" required>
+          <label for="terms">I agree to the <a href="#">Terms and Conditions</a> and <a href="#">Privacy Policy</a></label>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submit-btn">
+          Create Account
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <p class="login-link">
+          Already have an account? <a href="{% url 'signin' %}">Login here</a>
+        </p>
+        <p class="home-link">
+          <a href="{% url 'home' %}">Back to Home</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="{% static 'assets/js/modules/signup.js' %}"></script>
+</body>
+</html>

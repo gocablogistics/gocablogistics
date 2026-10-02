@@ -1,0 +1,26 @@
+# .github/workflows/redis-keepalive.yml
+name: Redis Keepalive
+
+on:
+  schedule:
+    
+    - cron: "0 3 */3 * *"
+  workflow_dispatch: {}  
+
+jobs:
+  ping-redis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install redis client
+        run: pip install redis
+
+      - name: Ping Upstash
+        env:
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+        run: python scripts/redis_keepalive.py

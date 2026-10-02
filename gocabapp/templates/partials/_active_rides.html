@@ -1,0 +1,90 @@
+{% load humanize %}
+{% for ride in active_rides %}
+<div class="trip-card active" data-ride-id="{{ ride.id }}">
+    <div class="trip-header">
+        <div class="trip-meta">
+            <span class="trip-time">Started {{ ride.started_at|timesince }} ago</span>
+            <span class="trip-distance">{{ ride.distance_km|floatformat:1|default:"0.0" }} km</span>
+        </div>
+        <div class="trip-price">₦{{ ride.total_fare|floatformat:2|intcomma|default:"0.00" }}</div>
+    </div>
+    <div class="trip-progress">
+        <div class="progress-bar">
+            <div class="progress" style="width: {% widthratio ride.distance_traveled ride.distance_km 100 %}%"></div>
+        </div>
+        <div class="progress-labels">
+            <span>Pickup</span>
+            <span>Destination</span>
+        </div>
+    </div>
+    <div class="trip-footer">
+        <div class="passenger-info">
+            <div class="passenger-avatar">
+                {{ ride.passenger.first_name|first }}{{ ride.passenger.last_name|first }}
+            </div>
+            <div class="passenger-details">
+                <div class="passenger-name">{{ ride.passenger.get_full_name|default:ride.passenger.username }}</div>
+                <div class="passenger-contact">
+                    <div class="passenger-phone">
+                        <i class="fas fa-phone"></i>
+                        {% if ride.passenger.rider and ride.passenger.rider.phone_number %}
+                            {{ ride.passenger.rider.phone_number }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="passenger-location">
+                    <i class="fas fa-map-marker-alt"></i> {{ ride.current_location }}
+                </div>
+            </div>
+        </div>
+        <div class="trip-actions">
+            <form method="post" action="{% url 'complete_trip' ride.id %}" class="inline-form">
+                {% csrf_token %}
+                <input type="hidden" name="ride_id" value="{{ ride.id }}">
+                <button type="submit" class="complete-btn">
+                     Complete
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="trip-timer">
+        <i class="fas fa-stopwatch"></i>
+        <span>Trip duration: {{ ride.started_at|timesince }}</span>
+    </div>
+</div>
+{% empty %}
+<div class="empty-flow-state">
+    <i class="fas fa-road"></i>
+    <p>No active trip</p>
+</div>
+{% endfor %}
+
+{% if active_rides.has_other_pages %}
+<div class="pagination" id="activeRidesPagination">
+    {% if active_rides.has_previous %}
+        <button class="page-link" data-page="{{ active_rides.previous_page_number }}" data-action="active">
+            <i class="fas fa-chevron-left"></i> Previous
+        </button>
+    {% endif %}
+    <div class="page-numbers">
+        {% for num in active_rides.paginator.page_range %}
+            {% if active_rides.number == num %}
+                <span class="page-link current">{{ num }}</span>
+            {% elif num > active_rides.number|add:'-3' and num < active_rides.number|add:'3' %}
+                <button class="page-link" data-page="{{ num }}" data-action="active">{{ num }}</button>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% if active_rides.has_next %}
+        <button class="page-link" data-page="{{ active_rides.next_page_number }}" data-action="active">
+            Next <i class="fas fa-chevron-right"></i>
+        </button>
+    {% endif %}
+</div>
+
+<div class="pagination-info">
+    Showing {{ active_rides.start_index }}-{{ active_rides.end_index }} of {{ active_rides.paginator.count }} active rides
+</div>
+{% endif %}

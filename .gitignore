@@ -1,0 +1,28 @@
+# Secrets — never commit
+.env
+secrets/
+frontend/src-tauri/gen/android/app/google-services.json
+
+# Local databases / caches
+db.sqlite3
+dump.rdb
+frontend/dump.rdb
+
+# User-uploaded content (PII — driver documents, photos)
+media/
+
+# Django
+staticfiles/
+__pycache__/
+*.pyc
+
+# Frontend / Tauri build artifacts
+node_modules/
+frontend/dist/
+frontend/src-tauri/target/
+frontend/src-tauri/gen/android/.gradle/
+frontend/src-tauri/gen/android/app/build/
+frontend/src-tauri/gen/android/build/
+
+# OS
+.DS_Store

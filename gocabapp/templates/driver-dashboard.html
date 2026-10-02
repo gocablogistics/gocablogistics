@@ -1,0 +1,203 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Dashboard - GoCab Driver</title>
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#08915e"/>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <!-- Favicons -->
+  <link rel="icon" href="{% static 'assets/img/favicon.png' %}" />
+  <link rel="apple-touch-icon" href="{% static 'assets/img/apple-touch-icon.png' %}" />
+
+  <!-- iOS Specific -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GoCab">
+  <link rel="apple-touch-icon" href="{% static 'assets/img/apple-touch-icon.png' %}" />
+  
+  <!-- Android Specific -->
+  <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+    <link href="{% static 'assets/css/driver-dashboard.css' %}" rel="stylesheet" />
+  </head>
+
+  <body data-user-id="{{ request.user.id }}">
+    <!-- Desktop Sidebar (hidden on mobile) -->
+    <div id="sidebar">
+      <div class="sidebar-header">
+        <a href="#" class="sidebar-logo">
+          
+          <span>🛵 GoCab</span>
+        </a>
+      </div>
+
+      <ul class="sidebar-menu">
+        <li class="menu-title">MAIN</li>
+        <li class="menu-item">
+          <a href="{% url 'driver_dashboard' %}" class="menu-link active">
+            <i class="fas fa-home"></i>
+            <span>Overview</span>
+          </a>
+        </li>
+        <li class="menu-item">
+          <a href="{% url 'driver_profile' %}" class="menu-link">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+          </a>
+        </li>
+        <li class="menu-title">Logout</li>
+        <li class="menu-item">
+          <a href="{% url 'logout' %}" class="menu-link">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+      <!-- Mobile Header -->
+      <div class="header-bar">
+        <a href="#" class="app-logo">
+          
+          <span> GoCab</span>
+        </a>
+        <div class="user-menu">
+          <button class="menu-toggle">
+            <i class="fas fa-ellipsis-v"></i>
+          </button>
+          <div class="dropdown-menu">
+            <a href="{% url 'driver_dashboard' %}" class="dropdown-item">
+              <i class="fas fa-home"></i>
+              <span>Overview</span>
+            </a>
+            <a href="{% url 'driver_profile' %}" class="dropdown-item">
+              <i class="fas fa-user"></i>
+              <span>Profile</span>
+            </a>
+            <a href="{% url 'logout' %}" class="dropdown-item">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="trips-dashboard">
+        <!-- Trip Status Tabs -->
+        <div class="trip-tabs">
+          <button class="tab-btn active" data-tab="new-trips">
+            <span>New</span>
+            <span id="newRequestsBadge" class="badge">{{ new_requests }}</span>
+          </button>
+          <button class="tab-btn" data-tab="starting-trips">
+            <span>Starting</span>
+            <span id="acceptedRidesBadge" class="badge">{{ accepted_rides|length }}</span>
+          </button>
+          <button class="tab-btn" data-tab="active-trips">
+            <span>Active</span>
+            <span id="activeTripsBadge" class="badge">{{ active_trips }}</span>
+          </button>
+          <button class="tab-btn" data-tab="completed-trips">
+            <span>Completed</span>
+            <span id="completedTripsBadge" class="badge">{{ completed_trips}}</span>
+          </button>
+        </div>
+
+        <!-- Trip Sections -->
+        <div class="trip-section active" id="new-trips">
+          <div id="pendingRidesContainer">
+            {% include 'partials/_pending_rides.html' %}
+          </div>
+        </div>
+
+        <div class="trip-section" id="starting-trips">
+          <div id="acceptedRidesContainer">
+            {% include 'partials/_accepted_rides.html' %}
+          </div>
+        </div>
+
+        <div class="trip-section" id="active-trips">
+          <div id="activeRidesContainer">
+            {% include 'partials/_active_rides.html' %}
+          </div>
+        </div>
+
+        <div class="trip-section" id="completed-trips">
+          <div id="completedRidesContainer">
+            {% include 'partials/_completed_rides.html' %}
+          </div>
+        </div>
+      </div>
+
+      <!-- WebSocket Status Indicator -->
+      <div id="connectionStatus" class="connection-status">
+        <span class="status-dot"></span>
+        <span class="status-text">Connecting...</span>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation - Mobile Only -->
+    <nav class="bottom-nav">
+      <a href="{% url 'driver_dashboard' %}" class="nav-item active">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+      </a>
+      <a href="{% url 'driver_profile' %}" class="nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+      </a>
+      <a href="{% url 'logout' %}" class="nav-item">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>logout</span>
+      </a>
+    </nav>
+
+    <script type="module" src="{% static 'assets/js/modules/driver-dashboard.js' %}"></script>
+    
+    <!-- Add this JavaScript for mobile interactions -->
+    <script>
+      // Mobile menu toggle
+      document.addEventListener('DOMContentLoaded', function() {
+        const menuToggle = document.querySelector('.menu-toggle');
+        const dropdownMenu = document.querySelector('.dropdown-menu');
+        
+        if (menuToggle && dropdownMenu) {
+          menuToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle('active');
+          });
+          
+          // Close dropdown when clicking outside
+          document.addEventListener('click', function() {
+            dropdownMenu.classList.remove('active');
+          });
+        }
+        
+        
+        // Bottom nav active state
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.addEventListener('click', function() {
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            this.classList.add('active');
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,826 @@
+/* --- Base Reset & Font Imports --- */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Raleway:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+
+    --default-font: "Roboto", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --heading-font: "Raleway", sans-serif;
+    --nav-font: "Poppins", sans-serif;
+
+    --bg-page: #070911;
+    --bg-panel: #12161c;
+    --bg-panel-alt: #0d1117;
+    --bg-inset: #0b0f14;
+    --border-soft: #1f242c;
+    --border-hair: #161b22;
+    --accent: #2f80ed;
+    --text-primary: #ffffff;
+    --text-muted: #8b949e;
+    --text-dim: #484f58;
+    --green: #2ecc71;
+    --amber: #fab042;
+    --red: #f85149;
+}
+
+body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    font-family: var(--default-font);
+}
+
+/* --- Container App Viewport Core --- */
+.dashboard-container {
+    display: flex;
+    width: 100%;
+    max-width: 1400px;
+    min-height: 850px;
+    background-color: var(--bg-page);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    position: relative;
+}
+
+/* --- Navigation System Drawer Panel --- */
+.sidebar {
+    width: 260px;
+    background-color: var(--bg-panel-alt);
+    padding: 40px 24px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-hair);
+    transition: transform 0.3s ease;
+    z-index: 100;
+}
+
+.sidebar-header-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 50px;
+}
+
+.close-sidebar-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+    font-family: var(--heading-font);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.badge-role {
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(47, 128, 237, 0.15);
+    color: var(--accent);
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 18px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    font-family: var(--nav-font);
+}
+
+.nav-item:hover, .nav-item.active {
+    background-color: var(--border-hair);
+    color: var(--accent);
+}
+
+.duty-status-wrapper {
+    display: inline-block;
+    
+}
+
+.duty-btn {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Driver is Not Busy / Offline (Red) */
+.status-not-busy {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Driver is Busy / On a Ride (Blue) */
+.status-busy {
+    background-color: #2f80ed;
+    color: white;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.2);
+}
+
+/* --- Central Workspace Area Layout --- */
+.main-content {
+    flex: 1;
+    padding: 30px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+}
+
+/* --- Top App Header Navigation Segment --- */
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.grid-btn {
+    background: var(--border-hair);
+    border: none;
+    color: var(--text-muted);
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    display: none;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.header-logout-icon {
+    background: var(--border-hair);
+    color: var(--text-muted);
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.header-logout-icon:hover { color: var(--red); }
+
+/* --- Live connection indicator --- */
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--border-hair);
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.connection-status .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--red);
+    flex-shrink: 0;
+    transition: background-color 0.2s ease;
+}
+
+.connection-status .status-dot.connected {
+    background-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
+}
+
+/* --- Avatars --- */
+.driver-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: rgba(47, 128, 237, 0.15);
+    color: var(--accent);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(47, 128, 237, 0.3);
+    flex-shrink: 0;
+}
+
+.header-avatar { width: 42px; height: 42px; font-size: 14px; }
+.compact-avatar { width: 32px; height: 32px; font-size: 11px; }
+
+/* --- Generic Panel --- */
+.panel {
+    background-color: var(--bg-panel);
+    border-radius: 20px;
+    padding: 30px;
+    border: 1px solid var(--border-soft);
+}
+
+/* --- Section 1: Map + Performance --- */
+.dashboard-grid-upper {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 24px;
+}
+
+.map-panel { padding: 0; overflow: hidden; min-height: 320px; }
+
+.map-container-fallback {
+    width: 100%;
+    height: 100%;
+    min-height: 320px;
+    background: radial-gradient(circle at 30% 30%, rgba(47,128,237,0.08), transparent 60%), var(--bg-inset);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.map-placeholder-graphics {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 20px;
+}
+
+.map-placeholder-graphics i {
+    font-size: 32px;
+    color: var(--accent);
+    margin-bottom: 12px;
+    display: block;
+}
+
+.pulsing-gps { animation: pulseActive 1.6s infinite; }
+
+@keyframes pulseActive {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.panel-title-large {
+    font-size: 18px;
+    font-weight: 600;
+    font-family: var(--heading-font);
+    margin-bottom: 20px;
+}
+
+.performance-metrics-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.metric-circle-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.circle-progress-wrapper {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: conic-gradient(var(--accent) 0deg, var(--border-soft) 0deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.circle-progress-wrapper::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border-radius: 50%;
+    background: var(--bg-panel);
+}
+
+.metric-percent {
+    position: relative;
+    z-index: 1;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.circle-rating {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.text-gold { color: #ffb800; }
+
+.metric-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.divider-line {
+    border: none;
+    border-top: 1px solid var(--border-hair);
+    margin: 20px 0;
+}
+
+.revenue-tracking-block {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.revenue-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.revenue-label { font-size: 13px; color: var(--text-muted); }
+.revenue-amount { font-size: 16px; font-weight: 600; }
+.revenue-amount.total-highlight { color: var(--accent); font-size: 18px; }
+
+/* --- Section 2: Live ride pipeline — always-visible 4-panel grid, no tabs --- */
+.dashboard-grid-lower-four {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--border-hair);
+    color: var(--text-primary);
+}
+
+.count-badge.amber-badge { background: rgba(250, 176, 66, 0.18); color: var(--amber); }
+.count-badge.blue-badge { background: rgba(47, 128, 237, 0.18); color: var(--accent); }
+.count-badge.green-badge { background: rgba(46, 204, 113, 0.18); color: var(--green); }
+.count-badge.gray-badge { background: var(--border-hair); color: var(--text-muted); }
+
+.status-flow-card { display: flex; flex-direction: column; gap: 14px; padding: 22px; }
+.flow-card-header { display: flex; justify-content: space-between; align-items: center; }
+.flow-card-header h4 { font-size: 14px; font-weight: 600; font-family: var(--heading-font); }
+
+.flow-card-content.scrollable {
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.flow-card-content.scrollable::-webkit-scrollbar { width: 5px; }
+.flow-card-content.scrollable::-webkit-scrollbar-thumb { background: var(--border-soft); border-radius: 4px; }
+
+.empty-flow-state { text-align: center; color: var(--text-muted); padding: 24px 0; }
+.empty-flow-state i { font-size: 24px; margin-bottom: 10px; display: block; color: var(--border-soft); }
+.empty-flow-state p { font-size: 13px; }
+
+/* --- Last Completed summary card --- */
+.last-completed-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg-inset);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 14px;
+}
+.lc-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; }
+.lc-label { color: var(--text-muted); }
+.lc-value { color: var(--text-primary); font-weight: 600; text-align: right; }
+.lc-payment { justify-content: flex-end; }
+
+/* --- Trip cards (driven by driver-dashboard.js) --- */
+.trip-card {
+    background: var(--bg-inset);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 14px;
+    transition: opacity 0.3s ease, border-color 0.2s ease;
+}
+
+.trip-card:hover { border-color: #30363d; }
+.trip-card:last-child { margin-bottom: 0; }
+.trip-card.active { border-color: rgba(47, 128, 237, 0.4); }
+.trip-card.completed { background: var(--bg-panel); }
+
+.trip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    gap: 12px;
+}
+
+.trip-meta { display: flex; flex-direction: column; gap: 4px; }
+.trip-time { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.trip-distance { font-size: 12px; color: var(--text-muted); }
+.pickup-time { font-size: 11px; color: var(--amber); font-weight: 600; }
+.trip-price { font-size: 18px; font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+.trip-date { font-size: 13px; color: var(--text-muted); }
+
+.payment-status { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 8px; }
+.payment-status.paid { background: rgba(46, 204, 113, 0.15); color: var(--green); }
+.payment-status.pending { background: rgba(250, 176, 66, 0.15); color: var(--amber); }
+
+.trip-route { display: flex; flex-direction: column; gap: 0; margin-bottom: 14px; }
+
+.route-point { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; padding: 4px 0; }
+.route-point.pickup i { color: var(--accent); font-size: 8px; margin-top: 5px; }
+.route-point.dropoff i { color: var(--red); font-size: 12px; margin-top: 2px; }
+.route-point .location, .route-point span { color: var(--text-primary); }
+.route-line { width: 1px; height: 16px; background: var(--border-soft); margin-left: 3px; }
+
+.trip-progress { margin-bottom: 14px; }
+.progress-bar { width: 100%; height: 6px; background: var(--border-soft); border-radius: 3px; overflow: hidden; }
+.progress { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s ease; }
+.progress-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+.trip-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+
+.passenger-info { display: flex; align-items: center; gap: 12px; }
+.passenger-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(47, 128, 237, 0.15); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.passenger-details { display: flex; flex-direction: column; gap: 3px; }
+.passenger-name { font-size: 14px; font-weight: 600; }
+.passenger-contact { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.passenger-phone, .passenger-rating, .passenger-location { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+.passenger-phone i, .passenger-rating i, .passenger-location i { font-size: 11px; }
+.passenger-rating i { color: #ffb800; }
+
+.trip-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.inline-form, .accept-ride-form { display: inline-flex; }
+
+.accept-btn, .start-btn, .complete-btn {
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: opacity 0.2s ease;
+    font-family: var(--default-font);
+}
+
+.accept-btn:hover, .start-btn:hover, .complete-btn:hover { opacity: 0.9; }
+.complete-btn { background: var(--green); }
+
+.cancel-ride-btn {
+    background: transparent;
+    border: 1px solid var(--border-soft);
+    color: var(--red);
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: background 0.2s ease;
+    font-family: var(--default-font);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cancel-ride-btn:hover { background: rgba(248, 81, 73, 0.1); }
+
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.trip-eta, .trip-timer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-hair);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.eta-icon { color: var(--amber); }
+.trip-timer i { color: var(--accent); }
+
+.payment-details { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--green); margin-top: 8px; width: 100%; }
+.fare { font-weight: 700; font-size: 15px; }
+.duration { font-size: 12px; color: var(--text-muted); }
+
+.payment-actions { margin-top: 16px; }
+.btn-request-payment {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.no-trips { text-align: center; color: var(--text-muted); padding: 30px 0; font-size: 14px; }
+
+/* --- Empty states --- */
+.empty-state {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 40px 20px;
+}
+.empty-state i { font-size: 28px; color: var(--border-soft); margin-bottom: 12px; display: block; }
+.empty-state p { font-size: 14px; color: var(--text-primary); margin-bottom: 4px; }
+.empty-state .text-muted { font-size: 12px; color: var(--text-muted); }
+.location-info { margin-top: 10px; }
+
+/* --- Pagination (matches classes used in partials: .page-link / .pagination-info) --- */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-hair);
+    flex-wrap: wrap;
+}
+
+.page-link {
+    background: var(--border-hair);
+    border: 1px solid var(--border-soft);
+    color: var(--text-muted);
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--default-font);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.page-link:hover { border-color: var(--accent); color: var(--accent); }
+
+.page-link.current, span.page-link.current {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    cursor: default;
+    font-weight: 700;
+}
+
+.page-numbers { display: flex; gap: 6px; }
+
+.pagination-info {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 10px;
+}
+
+/* --- Legacy history table (kept in case it's reused elsewhere) --- */
+.history-panel .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.history-panel h3 { font-size: 18px; font-weight: 600; font-family: var(--heading-font); }
+.table-container { overflow-x: auto; }
+
+table { width: 100%; border-collapse: collapse; text-align: left; min-width: 600px; }
+th { color: var(--text-dim); font-size: 13px; font-weight: 500; padding: 0 16px 16px 0; border-bottom: 1px solid var(--border-soft); font-family: var(--heading-font); }
+td { padding: 16px 16px 16px 0; font-size: 14px; color: #c9d1d9; border-bottom: 1px solid var(--border-hair); }
+th:last-child, td:last-child { padding-right: 0; }
+.datetime { color: var(--text-muted); white-space: nowrap; }
+.table-customer-info { display: flex; align-items: center; gap: 12px; }
+.customer-name { font-weight: 500; color: #fff; }
+.amount { font-weight: 600; color: #fff; white-space: nowrap; }
+.amount.positive-gain { color: var(--green); }
+.location-cell {
+    display: inline-block;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+}
+.type-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+.type-badge.delivery { background: rgba(250, 176, 66, 0.15); color: var(--amber); }
+.type-badge.ride { background: rgba(47, 128, 237, 0.15); color: var(--accent); }
+
+/* ==========================================================================
+   RESPONSIVE DESIGN
+   ========================================================================== */
+@media (max-width: 1200px) {
+    .dashboard-grid-lower-four { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid-upper { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+    .dashboard-grid-lower-four { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    body { padding: 0; }
+    .dashboard-container { border-radius: 0; flex-direction: column; min-height: 100vh; }
+
+    .sidebar {
+        position: fixed;
+        left: 0; top: 0; bottom: 0;
+        transform: translateX(-100%);
+        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+    }
+    .sidebar.mobile-open { transform: translateX(0); }
+    .close-sidebar-btn { display: block; }
+    .grid-btn { display: flex; align-items: center; justify-content: center; }
+    .main-content { padding: 20px; }
+    .panel { padding: 20px; }
+    .trip-footer { flex-direction: column; align-items: stretch; }
+    .trip-actions { width: 100%; }
+    .trip-actions form, .trip-actions .accept-btn, .trip-actions .start-btn,
+    .trip-actions .complete-btn, .trip-actions .cancel-ride-btn { flex: 1; }
+}
+
+
+.driver-identity-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #161b22;
+    border: 1px solid #21262d;
+    padding: 16px 20px;
+    border-radius: 40px;
+    margin-bottom: 24px;
+    width: 100%;
+    gap: 10px; 
+    box-sizing: border-box;
+}
+
+.identity-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0; 
+    flex: 1;      
+}
+
+
+.driver-row-avatar {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+    background-color: #21262d;
+    border: 2px solid #2f80ed;
+    flex-shrink: 0 !important; 
+}
+
+
+.driver-row-avatar-placeholder {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important;
+    background-color: rgba(47, 128, 237, 0.15);
+    color: #2f80ed;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border: 2px solid #2f80ed;
+    text-transform: uppercase;
+    flex-shrink: 0 !important;
+}
+
+.identity-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0; 
+}
+
+.driver-row-name {
+    font-size: 18px;
+    font-weight: 500;
+    color: #ffffff;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.driver-row-vehicle {
+    font-size: 14px;
+    color: #8b949e;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.identity-right {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0; 
+}
+
+.license-plate-pill {
+    background: rgba(47, 128, 237, 0.12);
+    color: #2f80ed;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 1px solid rgba(47, 128, 237, 0.3);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+
+@media (max-width: 480px) {
+    .driver-identity-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        border-radius: 20px;
+    }
+    .identity-right {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}

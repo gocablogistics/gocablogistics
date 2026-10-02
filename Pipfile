@@ -1,0 +1,33 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+django = "*"
+dj-database-url = "*"
+psycopg2 = "*"
+channels = {extras = ["daphne"], version = "*"}
+channels-redis = "*"
+django-background-tasks = "*"
+whitenoise = "*"
+django-redis = "*"
+redis = "*"
+googlemaps = "*"
+python-dotenv = "*"
+black = "*"
+django-ninja = "*"
+django-ninja-jwt = "*"
+django-cors-headers = "*"
+argon2-cffi = "*"
+email-validator = "*"
+django-cloudinary-storage = "*"
+cloudinary = "*"
+phonenumbers = "*"
+firebase-admin = "*"
+sentry-sdk = {extras = ["django"], version = "*"}
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"

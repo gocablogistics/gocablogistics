@@ -1,0 +1,9 @@
+[default]
+description = "Default permissions for the gocab-native plugin"
+permissions = [
+    "allow-get-fcm-token",
+    "allow-request-notification-permission",
+    "allow-start-location-tracking",
+    "allow-stop-location-tracking",
+    "allow-update-location-token",
+]

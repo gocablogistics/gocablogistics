@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon background layer, behind the green pin foreground
+     (ic_launcher_foreground.png, regenerated from public/gocab-logo.png).
+     `tauri icon` only replaces the foreground from a single flat source
+     image — this file was still Android Studio's leftover placeholder grid
+     graphic until now. #20241f matches the app's real background color
+     everywhere else (see themes.xml, index.css), so the launcher icon,
+     splash screen, and in-app background are all the same dark tone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#20241f"
+        android:pathData="M0,0h108v108h-108z" />
+</vector>

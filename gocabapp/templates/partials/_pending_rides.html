@@ -1,0 +1,114 @@
+{% load humanize %}
+{% for ride in pending_rides %}
+<div class="trip-card" data-ride-id="{{ ride.id }}">
+    <div class="trip-header">
+        <div class="trip-meta">
+            <span class="trip-time">{{ ride.requested_at|timesince }} ago</span>
+            <span class="trip-distance">
+                {% if ride.distance_from_driver %}
+                    {{ ride.distance_from_driver|floatformat:1 }} km away
+                {% else %}
+                    {{ ride.distance_km|floatformat:1 }} km trip
+                {% endif %}
+            </span>
+            {% if ride.estimated_pickup_time %}
+            <span class="pickup-time">~{{ ride.estimated_pickup_time }} min pickup</span>
+            {% endif %}
+        </div>
+        <div class="trip-price">₦{{ ride.total_fare|floatformat:2|intcomma }}</div>
+    </div>
+
+    <div class="trip-route">
+        <div class="route-point pickup">
+            <i class="fas fa-circle"></i>
+            <div class="location">{{ ride.current_location }}</div>
+        </div>
+        <div class="route-line"></div>
+        <div class="route-point dropoff">
+            <i class="fas fa-map-marker-alt"></i>
+            <div class="location">{{ ride.destination }}</div>
+        </div>
+    </div>
+
+    <div class="trip-footer">
+        <div class="passenger-info">
+            <div class="passenger-avatar">
+                {{ ride.passenger.get_full_name|first|default:ride.passenger.username|first }}
+            </div>
+            <div class="passenger-details">
+                <div class="passenger-name">
+                    {{ ride.passenger.get_full_name|default:ride.passenger.username }}
+                </div>
+                <div class="passenger-contact">
+                    <div class="passenger-phone">
+                        <i class="fas fa-phone"></i>
+                        <a href="tel:{{ ride.passenger_phone }}" style="color: inherit; text-decoration: none;">
+                            {{ ride.passenger_phone }}
+                        </a>
+                    </div>
+                    <div class="passenger-rating">
+                        <i class="fas fa-star"></i>
+                        {% with rider_profile=ride.passenger.rider %}
+                            {% if rider_profile and rider_profile.rating %}
+                                {{ rider_profile.rating|floatformat:1 }}
+                            {% else %}
+                                5.0
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="trip-actions">
+            <form method="post" action="{% url 'accept_ride' ride.id %}" class="accept-ride-form">
+                {% csrf_token %}
+                <input type="hidden" name="ride_id" value="{{ ride.id }}">
+                <button type="button" class="accept-btn">
+                     Accept
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% empty %}
+<div class="empty-state">
+    <i class="fas fa-shipping-fast"></i>
+    {% if has_location %}
+        <p>No deliveries within {{ max_distance }}km radius</p>
+        <small class="text-muted">Deliveries will appear here as they become available</small>
+    {% else %}
+        <p>No new delivery requests</p>
+        <small class="text-muted">Update your location to see nearby deliveries</small>
+    {% endif %}
+</div>
+{% endfor %}
+
+{% if pending_rides.has_other_pages %}
+<div class="pagination" id="pendingRidesPagination">
+    {% if pending_rides.has_previous %}
+        <button class="page-link" data-page="{{ pending_rides.previous_page_number }}" data-action="pending">
+            <i class="fas fa-chevron-left"></i> Previous
+        </button>
+    {% endif %}
+
+    <div class="page-numbers">
+        {% for num in pending_rides.paginator.page_range %}
+            {% if pending_rides.number == num %}
+                <span class="page-link current">{{ num }}</span>
+            {% elif num > pending_rides.number|add:'-3' and num < pending_rides.number|add:'3' %}
+                <button class="page-link" data-page="{{ num }}" data-action="pending">{{ num }}</button>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    {% if pending_rides.has_next %}
+        <button class="page-link" data-page="{{ pending_rides.next_page_number }}" data-action="pending">
+            Next <i class="fas fa-chevron-right"></i>
+        </button>
+    {% endif %}
+</div>
+
+<div class="pagination-info">
+    Showing {{ pending_rides.start_index }}-{{ pending_rides.end_index }} of {{ pending_rides.paginator.count }} pending rides
+</div>
+{% endif %}

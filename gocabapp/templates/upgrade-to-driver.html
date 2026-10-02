@@ -1,0 +1,362 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoCab - Upgrade to Driver</title>
+  <meta name="description" content="Upgrade your account to become a GoCab driver">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <meta name="theme-color" content="#08915e"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="GoCab">
+
+  <!-- Favicons -->
+  <link rel="icon" href="{% static 'assets/img/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'assets/img/apple-touch-icon.png' %}">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link
+      href="{% static 'assets/css/upgrade-to-driver.css' %}"
+      rel="stylesheet"
+    />
+</head>
+
+<body>
+  <div class="pwa-container">
+    <!-- Header -->
+    <div class="pwa-header">
+      <div class="logo">
+        <i>🛵</i>
+        <h1>GoCab</h1>
+      </div>
+      <h2>Upgrade to Driver</h2>
+      <p>Complete your driver application to start earning</p>
+    </div>
+
+    <!-- Progress Steps -->
+    <div class="progress-steps">
+      <div class="progress-step">
+        <div class="step-number active">1</div>
+        <div class="step-label active">Personal Info</div>
+      </div>
+      <div class="progress-step">
+        <div class="step-number">2</div>
+        <div class="step-label">Vehicle Info</div>
+      </div>
+      <div class="progress-step">
+        <div class="step-number">3</div>
+        <div class="step-label">Documents</div>
+      </div>
+      <div class="progress-step">
+        <div class="step-number">4</div>
+        <div class="step-label">Banking</div>
+      </div>
+    </div>
+
+    <!-- Form Section -->
+    <div class="pwa-form-section">
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+        <p class="{{ message.tags }}">{{ message }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <form class="signup-form" action="{% url 'upgrade_to_driver' %}" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Personal Information -->
+        <div class="form-section">
+          <h3>Personal Information</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="{{ form.username.id_for_label }}">Username</label>
+              {{ form.username }}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.full_name.id_for_label }}">Full Name</label>
+              {{ form.full_name }}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.email.id_for_label }}">Email Address</label>
+              {{ form.email }}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.phone_number.id_for_label }}">Phone Number</label>
+              {{ form.phone_number }}
+              <div class="file-hint">Format: +2348012345678</div>
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.date_of_birth.id_for_label }}">Date of Birth</label>
+              {{ form.date_of_birth }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Vehicle Information -->
+        <div class="form-section">
+          <h3>Vehicle Information</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="{{ form.vehicle_type.id_for_label }}">Vehicle Type</label>
+              {{ form.vehicle_type }}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.vehicle_model.id_for_label }}">Vehicle Model</label>
+              {{ form.vehicle_model }}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.drivers_license.id_for_label }}">Driver's License</label>
+              {{ form.drivers_license }}
+              <div class="file-hint">Upload a clear photo of your valid driver's license</div>
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.vehicle_insurance.id_for_label }}">Vehicle Insurance</label>
+              {{ form.vehicle_insurance }}
+              <div class="file-hint">Upload current vehicle insurance document</div>
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.vehicle_registration.id_for_label }}">Vehicle Registration</label>
+              {{ form.vehicle_registration }}
+              <div class="file-hint">Upload vehicle registration certificate</div>
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.roadworthiness_certificate.id_for_label }}">Roadworthiness Certificate</label>
+              {{ form.roadworthiness_certificate }}
+              <div class="file-hint">Upload valid roadworthiness certificate</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Identification -->
+        <div class="form-section">
+          <h3>Identification</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="{{ form.national_identification_number.id_for_label }}">National Identification Number</label>
+              {{ form.national_identification_number }}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.passport_photo.id_for_label }}">Passport Photo</label>
+              {{ form.passport_photo }}
+              <div class="file-hint">Recent passport-sized photograph</div>
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.proof_of_residency.id_for_label }}">Proof of Residency</label>
+              {{ form.proof_of_residency }}
+              <div class="file-hint">Utility bill or any proof of address</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Banking Information -->
+        <div class="form-section">
+          <h3>Banking Information</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="{{ form.bank_name.id_for_label }}">Bank Name</label>
+              {{ form.bank_name }}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.account_number.id_for_label }}">Account Number</label>
+              {{ form.account_number }}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.account_holder_name.id_for_label }}">Account Holder's Name</label>
+              {{ form.account_holder_name }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Terms and Conditions -->
+        <div class="terms-checkbox">
+          <input type="checkbox" id="terms" name="terms" required>
+          <label for="terms">I agree to the <a href="#">Terms and Conditions</a> and <a href="#">Privacy Policy</a>. I certify that all information provided is accurate and complete.</label>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submit-btn">
+          Submit Driver Application
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Form Validation and Submission
+    const form = document.querySelector('.signup-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const termsCheckbox = document.getElementById('terms');
+
+    // File input validation
+    const fileInputs = form.querySelectorAll('input[type="file"]');
+    
+    fileInputs.forEach(input => {
+      input.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          // Check file size (5MB max)
+          const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+          if (file.size > maxSize) {
+            alert('File size too large. Please upload files smaller than 5MB.');
+            e.target.value = '';
+            return;
+          }
+
+          // Check file type for images
+          const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+          if (imageTypes.includes(file.type)) {
+            const img = new Image();
+            img.onload = function() {
+              // Image loaded successfully
+              console.log('Image dimensions:', img.width, 'x', img.height);
+            };
+            img.onerror = function() {
+              alert('Invalid image file. Please upload a valid image.');
+              e.target.value = '';
+            };
+            img.src = URL.createObjectURL(file);
+          }
+        }
+      });
+    });
+
+    // Phone number formatting
+    const phoneInput = document.querySelector('input[name="phone_number"]');
+    if (phoneInput) {
+      phoneInput.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.startsWith('234')) {
+          value = '+' + value;
+        } else if (value.startsWith('0')) {
+          value = '+234' + value.substring(1);
+        }
+        e.target.value = value;
+      });
+    }
+
+    // Form validation
+    function validateForm() {
+      let isValid = true;
+      
+      // Check required fields
+      const requiredInputs = form.querySelectorAll('input[required], select[required]');
+      requiredInputs.forEach(input => {
+        if (!input.value.trim()) {
+          isValid = false;
+        }
+      });
+
+      // Check file inputs
+      const requiredFiles = form.querySelectorAll('input[type="file"][required]');
+      requiredFiles.forEach(input => {
+        if (!input.files || input.files.length === 0) {
+          isValid = false;
+        }
+      });
+
+      // Check terms acceptance
+      if (!termsCheckbox.checked) {
+        isValid = false;
+      }
+
+      return isValid;
+    }
+
+    // Update submit button state
+    function updateSubmitButton() {
+      submitBtn.disabled = !validateForm();
+    }
+
+    // Add event listeners for real-time validation
+    const formInputs = form.querySelectorAll('input, select');
+    formInputs.forEach(input => {
+      input.addEventListener('input', updateSubmitButton);
+      input.addEventListener('change', updateSubmitButton);
+    });
+
+    termsCheckbox.addEventListener('change', updateSubmitButton);
+
+    // Form submission
+    form.addEventListener('submit', (e) => {
+      if (!validateForm()) {
+        e.preventDefault();
+        alert('Please fill in all required fields and accept the terms and conditions.');
+        return;
+      }
+
+      // Show loading state
+      submitBtn.classList.add('loading');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting Application...';
+
+      // Form will submit normally, loading state is for UX
+      setTimeout(() => {
+        if (!form.checkValidity()) {
+          submitBtn.classList.remove('loading');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Driver Application';
+        }
+      }, 3000);
+    });
+
+    // Scroll to sections when clicking progress steps
+    const progressSteps = document.querySelectorAll('.progress-step');
+    const formSections = document.querySelectorAll('.form-section');
+
+    progressSteps.forEach((step, index) => {
+      step.addEventListener('click', () => {
+        if (index < formSections.length) {
+          formSections[index].scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+
+    // PWA Installation
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('{% static "sw.js" %}')
+          .then(registration => console.log('SW registered'))
+          .catch(error => console.log('SW registration failed'));
+      });
+    }
+
+    // Prevent zoom on mobile
+    document.addEventListener('DOMContentLoaded', () => {
+      const inputs = document.querySelectorAll('input, select, textarea');
+      inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+          window.scrollTo(0, 0);
+        });
+      });
+    });
+
+    // Initialize form validation
+    updateSubmitButton();
+  </script>
+</body>
+</html>

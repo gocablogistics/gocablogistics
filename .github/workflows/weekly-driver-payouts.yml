@@ -1,0 +1,31 @@
+# Emails a review of what every driver is currently owed for the week,
+# instead of actually sending the money. Automated payouts move real money
+# on a codebase that's still changing fast, so this deliberately stops
+# short of firing anything, a human reads the numbers and clicks "Run this
+# week's payout now" in Django admin themselves (see
+# gocabapp/services/payout_service.send_weekly_payout_reminder). Same
+# server-to-server trigger pattern as sweep-stale-rides.yml, reusing the
+# same shared secret.
+#
+# To switch this to a fully automated run later (once the codebase has
+# settled and Paystack transfer OTP is disabled), point WEEKLY_PAYOUT_URL
+# at /internal/run-weekly-payouts instead of /internal/send-weekly-payout-reminder.
+name: Weekly Driver Payout Reminder
+
+on:
+  schedule:
+    # Every Monday at 06:00 UTC.
+    - cron: "0 6 * * 1"
+  workflow_dispatch: {}
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit the weekly payout reminder endpoint
+        env:
+          SWEEP_URL: ${{ secrets.WEEKLY_PAYOUT_URL }}
+          SWEEP_SECRET: ${{ secrets.STALE_SWEEP_SECRET }}
+        run: |
+          curl --fail-with-body -sS -X POST "$SWEEP_URL" \
+            -H "x-sweep-secret: $SWEEP_SECRET"

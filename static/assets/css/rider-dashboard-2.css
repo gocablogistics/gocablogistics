@@ -1,0 +1,814 @@
+/* --- Base Reset & Font Imports --- */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Raleway:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    
+    /* Your exact font tokens preserved */
+    --default-font: "Roboto", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --heading-font: "Raleway", sans-serif;
+    --nav-font: "Poppins", sans-serif;
+}
+
+body {
+    background-color: #070911;
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    font-family: var(--default-font);
+}
+
+/* --- Container App Viewport Core --- */
+.dashboard-container {
+    display: flex;
+    width: 100%;
+    max-width: 1400px;
+    min-height: 850px;
+    background-color: #090c0f;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    position: relative;
+}
+
+/* --- Navigation System Drawer Panel --- */
+.sidebar {
+    width: 260px;
+    background-color: #0d1117;
+    padding: 40px 24px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #161b22;
+    transition: transform 0.3s ease;
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 50px;
+}
+
+.logo h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #2f80ed;
+    font-family: var(--heading-font);
+}
+
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 18px;
+    color: #8b949e;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    font-family: var(--nav-font);
+}
+
+.nav-item:hover, .nav-item.active {
+    background-color: #161b22;
+    color: #2f80ed;
+}
+
+/* --- Central Workspace Area Layout --- */
+.main-content {
+    flex: 1;
+    padding: 30px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+}
+
+/* --- Top App Header Navigation Segment --- */
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.grid-btn {
+    background: #161b22;
+    border: none;
+    color: #8b949e;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.notification-icon {
+    background: #161b22;
+    color: #8b949e;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* --- Image Elements & Component Placeholders --- */
+.user-avatar-top img {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #2f80ed;
+}
+
+.passenger-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #1f242c;
+    object-fit: cover;
+    border: 2px solid #161b22;
+}
+
+.table-driver-info img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #1f242c;
+    flex-shrink: 0;
+}
+
+/* Missing Driver Initials Avatar Placeholder Styling */
+.driver-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: rgba(47, 128, 237, 0.15);
+    color: #2f80ed;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(47, 128, 237, 0.3);
+    flex-shrink: 0;
+}
+
+/* --- Container Block Panels Generic Configuration --- */
+.panel {
+    background-color: #12161c;
+    border-radius: 20px;
+    padding: 30px;
+    border: 1px solid #1f242c;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 24px;
+}
+
+/* --- Left Booking Module & Header Style Content --- */
+.route-panel h1 {
+    font-size: 42px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 30px;
+    letter-spacing: -1px;
+    font-family: var(--heading-font);
+}
+
+.location-form {
+    margin-top: 10px;
+}
+
+.location-inputs-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.input-group-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-group-field label {
+    font-size: 13px;
+    color: #8b949e;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pickup-dot { color: #2f80ed; }
+.destination-dot { color: #f85149; }
+
+.location-field {
+    background-color: #0b0f14;
+    border: 1px solid #1f242c;
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: #ffffff;
+    font-size: 14px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s ease;
+    font-family: var(--default-font);
+}
+
+.location-field:focus {
+    border-color: #2f80ed;
+}
+
+/* --- Interconnected Actions Subsystems Layout --- */
+.submit-btn, .pay-now-btn {
+    background-color: #2f80ed;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    transition: opacity 0.2s ease;
+    font-family: var(--default-font);
+}
+
+.submit-btn:hover, .pay-now-btn:hover {
+    opacity: 0.9;
+}
+
+.compact-pay {
+    padding: 6px 14px;
+    font-size: 12px;
+    border-radius: 6px;
+    width: auto;
+    display: inline-block;
+    margin-left: 10px;
+}
+
+/* --- Dynamic Calculation Matrix Container Display --- */
+.fare-estimate {
+    background: rgba(47, 128, 237, 0.08);
+    border: 1px dashed #2f80ed;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.fare-breakdown h4 {
+    font-size: 18px;
+    color: #ffffff;
+    font-family: var(--heading-font);
+}
+
+.fare-meta {
+    color: #8b949e;
+    margin-top: 4px;
+}
+
+.surge-notice {
+    color: #fab042;
+    font-size: 12px;
+    margin-top: 8px;
+    font-weight: 500;
+}
+
+/* --- Tracking Progress Pipeline Mechanics & Animation Structure --- */
+.ride-tracking-card {
+    background-color: #0b0f14;
+    border: 1px solid #1f242c;
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 10px;
+}
+
+.tracking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #161b22;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+}
+
+.tracking-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-indicator {
+    position: relative;
+    color: #2f80ed;
+    font-size: 18px;
+}
+
+.pulse-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: #2f80ed;
+    border-radius: 50%;
+    top: -2px;
+    right: -2px;
+    box-shadow: 0 0 0 rgba(47, 128, 237, 0.4);
+    animation: pulseActive 1.6s infinite;
+}
+
+@keyframes pulseActive {
+    0% { box-shadow: 0 0 0 0 rgba(47, 128, 237, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(47, 128, 237, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(47, 128, 237, 0); }
+}
+
+.tracking-timer {
+    font-size: 14px;
+    color: #8b949e;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.searching-state {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.loading-dots span {
+    width: 6px;
+    height: 6px;
+    background-color: #2f80ed;
+    display: inline-block;
+    border-radius: 50%;
+    animation: dots 1.4s infinite ease-in-out both;
+    margin: 0 2px;
+}
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes dots {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1.0); }
+}
+
+.driver-info-card {
+    background: #12161c;
+    border: 1px solid #161b22;
+    padding: 14px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.driver-info-card p i {
+    width: 20px;
+    color: #8b949e;
+}
+
+.eta-badge {
+    display: inline-block;
+    background-color: rgba(47, 128, 237, 0.15);
+    color: #2d8cf0;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 12px;
+}
+
+.tracking-actions {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cancel-ride-btn {
+    background: transparent;
+    border: 1px solid #21262d;
+    color: #f85149;
+    padding: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 13px;
+    width: 100%;
+    transition: background 0.2s;
+    font-family: var(--default-font);
+}
+
+.cancel-ride-btn:hover {
+    background: rgba(248, 81, 73, 0.1);
+}
+
+.payment-processing-btn {
+    background-color: #30363d;
+    color: #8b949e;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 15px;
+    width: 100%;
+}
+
+.payment-completed-state {
+    color: #2d8cf0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+/* --- Right Panel Navigation Element Matrix Styles --- */
+.panel-header-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.panel-title {
+    font-size: 16px;
+    color: #8b949e;
+    font-weight: 500;
+    font-family: var(--heading-font);
+}
+
+.toggle-container {
+    display: flex;
+    background: #0b0f14;
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid #1f242c;
+}
+
+.toggle-tab {
+    background: transparent;
+    border: none;
+    color: #8b949e;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--nav-font);
+}
+
+.toggle-tab.active {
+    background: #2f80ed;
+    color: #ffffff;
+}
+
+.view-content { display: none; }
+.view-content.active { display: block; }
+
+/* --- Passenger Stats Graphic View Module --- */
+.stats-container {
+    background: linear-gradient(135deg, #111a24 0%, #12161c 100%);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid #1b2531;
+}
+
+.passenger-profile-summary {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.passenger-profile-summary h4 { font-size: 18px; font-weight: 600; font-family: var(--heading-font); }
+.subtext { font-size: 13px; color: #2f80ed; font-weight: 500; }
+.stats-row { display: flex; flex-direction: column; gap: 12px; }
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #0b0f14;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #1f242c;
+}
+
+.stat-icon-wrapper {
+    width: 36px;
+    height: 36px;
+    background: #161b22;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #8b949e;
+    font-size: 14px;
+}
+
+.text-gold { color: #ffb800; }
+.stat-label { display: block; font-size: 11px; color: #8b949e; text-transform: uppercase; }
+.stat-value { display: block; font-size: 15px; font-weight: 600; margin-top: 2px; }
+
+/* --- Tiers Matrix Presentation Block --- */
+.tiers-grid { display: flex; flex-direction: column; gap: 12px; }
+
+.tier-card {
+    background: #0b0f14;
+    border: 1px solid #1f242c;
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.tier-card:hover { border-color: #30363d; }
+.tier-card.active-tier { border-color: #2f80ed; background: rgba(47, 128, 237, 0.04); }
+.tier-name { display: block; font-size: 16px; font-weight: 600; font-family: var(--heading-font); }
+.tier-eta { display: block; font-size: 12px; color: #2f80ed; margin-top: 4px; }
+.tier-meta { text-align: right; display: flex; flex-direction: column; gap: 4px; color: #8b949e; font-size: 13px; }
+.tier-price { font-size: 18px; font-weight: 700; color: #ffffff; }
+
+/* --- Service History Data Logger Layout Grid --- */
+.history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.history-header h3 { font-size: 18px; font-weight: 600; font-family: var(--heading-font); }
+.history-header .pagination-counter { color: #8b949e; font-size: 13px; }
+.table-container { overflow-x: auto; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    min-width: 600px;
+}
+
+th {
+    color: #484f58;
+    font-size: 13px;
+    font-weight: 500;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1f242c;
+    font-family: var(--heading-font);
+}
+
+td {
+    padding: 16px 0;
+    font-size: 14px;
+    color: #c9d1d9;
+    border-bottom: 1px solid #161b22;
+}
+
+.datetime { color: #8b949e; }
+.table-driver-info { display: flex; align-items: center; gap: 12px; }
+
+.driver-name { display: block; font-weight: 500; color: #ffffff; }
+.driver-car { display: block; font-size: 12px; color: #8b949e; }
+.amount { font-weight: 600; color: #ffffff; }
+.unassigned-text { color: #8b949e; font-style: italic; }
+.empty-table-notice { text-align: center; color: #8b949e; padding: 32px 0 !important; }
+
+.status-action-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.status-badge.completed { background-color: rgba(47, 128, 237, 0.15); color: #2d8cf0; }
+
+/* --- History Log Navigation & Pagination --- */
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 25px;
+    padding-top: 18px;
+    border-top: 1px solid #161b22;
+}
+
+.page-nav-trigger {
+    background-color: #161b22;
+    border: 1px solid #1f242c;
+    color: #c9d1d9;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    font-family: var(--default-font);
+}
+
+.page-nav-trigger:hover {
+    border-color: #2f80ed;
+    color: #2f80ed;
+}
+
+.page-numbers {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.page-num-link, .page-num-active {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    text-decoration: none;
+    font-family: var(--default-font);
+}
+
+.page-num-link {
+    color: #8b949e;
+    transition: all 0.2s ease;
+}
+
+.page-num-link:hover {
+    background-color: #161b22;
+    color: #ffffff;
+}
+
+.page-num-active {
+    background-color: #2f80ed;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN (MEDIA QUERIES)
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .route-panel h1 { font-size: 34px; }
+}
+
+@media (max-width: 768px) {
+    body { padding: 0; }
+    .dashboard-container { border-radius: 0; flex-direction: column; min-height: 100vh; }
+    
+    .sidebar {
+        position: fixed;
+        left: 0; top: 0; bottom: 0;
+        transform: translateX(-100%);
+        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+    }
+    .sidebar.mobile-open { transform: translateX(0); }
+    .main-content { padding: 20px; }
+    .route-panel h1 { font-size: 28px; }
+    .panel { padding: 20px; }
+}
+
+.header-logout-icon:hover {
+    color: #f85149 !important;
+    background-color: #1f242c !important;
+}
+
+@media (max-width: 768px) {
+    .close-sidebar-btn {
+        display: block !important; /* Reveals the X icon in mobile sidebar header */
+    }
+}
+
+/* Payment Toast Styles */
+.payment-success-toast,
+.payment-error-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    min-width: 320px;
+    max-width: 400px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    animation: slideInRight 0.3s ease-out;
+    border-left: 4px solid;
+    overflow: hidden;
+}
+
+.payment-success-toast {
+    border-left-color: #2563eb;
+    background: linear-gradient(135deg, #eff6ff, #ffffff);
+}
+
+.payment-error-toast {
+    border-left-color: #ef4444;
+    background: linear-gradient(135deg, #fef2f2, #ffffff);
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    gap: 12px;
+}
+
+.toast-content i {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.payment-success-toast .toast-content i {
+    color: #2563eb;
+}
+
+.payment-error-toast .toast-content i {
+    color: #ef4444;
+}
+
+.toast-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.toast-text strong {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.toast-text span {
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.4;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.toast-close:hover {
+    background: #f3f4f6;
+    color: #1e293b;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}

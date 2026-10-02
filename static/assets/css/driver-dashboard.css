@@ -1,0 +1,1258 @@
+/* PWA Mobile-First Dashboard */
+:root {
+  --primary-color: #08915e;
+  --primary-light: #e6f7f0;
+  --primary-dark: #067a4e;
+  --secondary-color: #64748b;
+  --background-color: #f8fafc;
+  --surface-color: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --border-color: #e2e8f0;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --info-color: #3b82f6;
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --bottom-nav-height: 60px;
+  --sidebar-width: 280px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+/* ===== MOBILE STYLES ===== */
+body {
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: calc(var(--safe-area-inset-bottom) + var(--bottom-nav-height));
+}
+
+/* Hide desktop sidebar on mobile */
+#sidebar {
+  display: none;
+}
+
+/* Main Content - Mobile First */
+main {
+  padding: 1rem;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Header Bar - Mobile */
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.app-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.app-logo i {
+  font-size: 1.5rem;
+}
+
+.user-menu {
+  position: relative;
+}
+
+.menu-toggle {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.menu-toggle:hover {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  min-width: 200px;
+  z-index: 1000;
+  display: none;
+  overflow: hidden;
+}
+
+.dropdown-menu.active {
+  display: block;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.dropdown-item i {
+  width: 16px;
+  text-align: center;
+  color: var(--primary-color);
+}
+
+/* Tab Navigation - Mobile Optimized */
+.trip-tabs {
+  display: flex;
+  background: var(--surface-color);
+  border-radius: 12px;
+  padding: 0.25rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid var(--border-color);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.trip-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-btn.active {
+  background: var(--primary-color);
+  color: white;
+  font-weight: 600;
+  transform: scale(1.02);
+}
+
+.tab-btn:hover:not(.active) {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.badge {
+  background: var(--info-color);
+  color: white;
+  border-radius: 10px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  min-width: 18px;
+  line-height: 1;
+}
+
+.tab-btn.active .badge {
+  background: white;
+  color: var(--primary-color);
+}
+
+/* Trip Sections */
+.trip-section {
+  display: none;
+}
+
+.trip-section.active {
+  display: block;
+  animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from { 
+      opacity: 0; 
+      transform: translateY(20px); 
+  }
+  to { 
+      opacity: 1; 
+      transform: translateY(0); 
+  }
+}
+
+/* ===== RIDE CARD STYLES ===== */
+#pendingRidesContainer,
+#acceptedRidesContainer,
+#activeRidesContainer,
+#completedRidesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.trip-card {
+  background: var(--surface-color);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.trip-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.trip-card:active {
+  transform: scale(0.98);
+}
+
+/* Trip Header */
+.trip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.trip-price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.trip-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.trip-time {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.trip-distance {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--info-color);
+  font-weight: 500;
+}
+
+.pickup-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--warning-color);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Route Styles */
+.trip-route {
+  position: relative;
+  padding-left: 1.5rem;
+  margin: 1.25rem 0;
+}
+
+.route-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.route-point:last-child {
+  margin-bottom: 0;
+}
+
+.route-point i {
+  font-size: 0.875rem;
+  position: relative;
+  z-index: 2;
+  background: var(--surface-color);
+  padding: 0.25rem;
+  border-radius: 50%;
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+}
+
+.route-point.pickup i {
+  color: var(--primary-color);
+  font-size: 0.75rem;
+}
+
+.route-point.dropoff i {
+  color: var(--error-color);
+  font-size: 1rem;
+}
+
+.route-line {
+  position: absolute;
+  left: 0.875rem;
+  top: 1.25rem;
+  bottom: 1.25rem;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--primary-color), var(--error-color));
+  opacity: 0.7;
+  z-index: 1;
+}
+
+.location {
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+/* Passenger Info */
+.passenger-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+}
+
+.passenger-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.passenger-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.passenger-name {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.375rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.passenger-contact {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.passenger-phone,
+.passenger-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.passenger-phone {
+  background: #eff6ff;
+  color: var(--info-color);
+  border: 1px solid #dbeafe;
+}
+
+.passenger-phone:hover {
+  background: var(--info-color);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.passenger-rating {
+  background: #fef3c7;
+  color: var(--warning-color);
+  border: 1px solid #fcd34d;
+}
+
+/* Action Buttons */
+.trip-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.accept-ride-form {
+  flex: 1;
+  margin: 0;
+}
+
+.accept-btn,
+.start-btn,
+.complete-btn,
+.cancel-ride-btn {
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.accept-btn {
+  background: var(--primary-color);
+  color: white;
+}
+
+.start-btn {
+  background: var(--success-color);
+  color: white;
+}
+
+.complete-btn {
+  background: var(--success-color);
+  color: white;
+}
+
+.cancel-ride-btn {
+  background: var(--error-color);
+  color: white;
+}
+
+.accept-btn:hover,
+.start-btn:hover,
+.complete-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(8, 145, 94, 0.3);
+}
+
+.cancel-ride-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.accept-btn:active,
+.start-btn:active,
+.complete-btn:active,
+.cancel-ride-btn:active {
+  transform: scale(0.95);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--text-secondary);
+  background: var(--surface-color);
+  border-radius: 16px;
+  border: 2px dashed var(--border-color);
+  margin: 1rem 0;
+}
+
+.empty-state i {
+  font-size: 3rem;
+  color: var(--border-color);
+  margin-bottom: 1rem;
+}
+
+.empty-state p {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.text-muted {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.location-info {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--primary-light);
+  border-radius: 8px;
+  border-left: 4px solid var(--primary-color);
+}
+
+.location-info small {
+  color: var(--primary-dark);
+  font-weight: 500;
+}
+
+.location-info i {
+  color: var(--primary-color);
+  margin-right: 0.5rem;
+}
+
+/* Pagination Styles */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 2rem 0 1rem;
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  flex: 1;
+}
+
+.page-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  background: var(--surface-color);
+  color: var(--primary-color);
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.page-link:hover {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.page-link.current {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  cursor: default;
+}
+
+.page-link i {
+  font-size: 0.75rem;
+}
+
+.pagination-info {
+  text-align: center;
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  font-weight: 500;
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--primary-light);
+  border-radius: 8px;
+}
+
+/* Bottom Navigation - Mobile Only */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface-color);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0.5rem;
+  padding-bottom: calc(0.5rem + var(--safe-area-inset-bottom));
+  height: var(--bottom-nav-height);
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.nav-item.active {
+  color: var(--primary-color);
+  background: var(--primary-light);
+  font-weight: 600;
+}
+
+.nav-item i {
+  font-size: 1.25rem;
+}
+
+.nav-item:hover {
+  color: var(--primary-color);
+  background: var(--primary-light);
+}
+
+/* Connection Status */
+.connection-status {
+  position: fixed;
+  top: calc(var(--safe-area-inset-top) + 1rem);
+  right: 1rem;
+  background: var(--surface-color);
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  z-index: 1000;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ccc;
+}
+
+.status-dot.connected {
+  background: var(--success-color);
+  animation: pulse 2s infinite;
+}
+
+/* ===== DESKTOP STYLES ===== */
+@media (min-width: 768px) {
+  body {
+      padding: 0 !important;
+      display: flex;
+      flex-direction: row;
+  }
+  
+  /* Show and style desktop sidebar */
+  #sidebar {
+      display: block !important;
+      width: var(--sidebar-width);
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background: var(--surface-color);
+      border-right: 1px solid var(--border-color);
+      padding: 2rem 1.5rem;
+      overflow-y: auto;
+      box-shadow: 2px 0 20px rgba(0,0,0,0.05);
+      z-index: 100;
+  }
+  
+  .sidebar-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      padding: 0;
+      border-bottom: none;
+  }
+  
+  .sidebar-logo {
+      font-size: 1.5rem;
+      color: var(--primary-color);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+  }
+  
+  .sidebar-logo i {
+      font-size: 1.75rem;
+  }
+  
+  .sidebar-menu {
+      list-style: none;
+  }
+  
+  .menu-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin: 2rem 0 1rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+  }
+  
+  .menu-item {
+      margin-bottom: 0.5rem;
+  }
+  
+  .menu-link {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      font-weight: 500;
+  }
+  
+  .menu-link.active,
+  .menu-link:hover {
+      background: var(--primary-light);
+      color: var(--primary-color);
+      font-weight: 600;
+      transform: translateX(4px);
+  }
+  
+  .menu-link i {
+      font-size: 1.1rem;
+      width: 20px;
+      text-align: center;
+  }
+  
+  /* Main content for desktop */
+  main {
+      margin-left: var(--sidebar-width) !important;
+      padding: 2rem 3rem !important;
+      width: calc(100% - var(--sidebar-width)) !important;
+      min-height: 100vh;
+  }
+  
+  /* Hide mobile header and bottom nav on desktop */
+  .header-bar {
+      display: none !important;
+  }
+  
+  .bottom-nav {
+      display: none !important;
+  }
+  
+  /* Desktop tab styles */
+  .trip-tabs {
+      flex-wrap: nowrap;
+      gap: 0;
+      padding: 0.5rem;
+      margin-bottom: 2rem;
+      max-width: 100%;
+  }
+  
+  .tab-btn {
+      flex: 1;
+      padding: 1rem 1.5rem;
+      font-size: 0.9rem;
+      flex-direction: row;
+      gap: 0.5rem;
+      min-width: auto;
+  }
+  
+  .tab-btn span:first-child {
+      font-size: 0.95rem;
+  }
+  
+  /* Desktop grid layout for ride cards */
+  #pendingRidesContainer,
+  #acceptedRidesContainer,
+  #activeRidesContainer,
+  #completedRidesContainer {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 1.5rem;
+  }
+  
+  .trip-card {
+      padding: 1.75rem;
+  }
+  
+  /* Connection status for desktop */
+  .connection-status {
+      top: 2rem;
+      right: 3rem;
+  }
+  
+  /* Pagination desktop styles */
+  .pagination {
+      flex-wrap: nowrap;
+      gap: 1.5rem;
+  }
+  
+  .page-numbers {
+      flex: 0 1 auto;
+  }
+}
+
+/* Large Desktop Styles */
+@media (min-width: 1200px) {
+  main {
+      padding: 2rem 4rem !important;
+  }
+  
+  #pendingRidesContainer,
+  #acceptedRidesContainer,
+  #activeRidesContainer,
+  #completedRidesContainer {
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 2rem;
+  }
+}
+
+/* PWA Standalone Mode */
+@media (display-mode: standalone) {
+  body {
+      padding-top: calc(var(--safe-area-inset-top) + 10px);
+  }
+  
+  .bottom-nav {
+      padding-bottom: calc(0.5rem + var(--safe-area-inset-bottom));
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .menu-link,
+  .tab-btn,
+  .accept-btn,
+  .start-btn,
+  .complete-btn,
+  .cancel-ride-btn,
+  .nav-item {
+      min-height: 44px;
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* Completed Rides Specific Styles */
+.trip-card.completed {
+  border-left: 4px solid var(--success-color);
+  background: linear-gradient(135deg, var(--surface-color), #f8fafc);
+}
+
+.trip-card.completed .trip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.trip-date {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.payment-status {
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.payment-status.paid {
+  background: var(--success-color);
+  color: white;
+}
+
+.payment-status.pending {
+  background: var(--warning-color);
+  color: white;
+}
+
+/* Completed Ride Route */
+.trip-card.completed .trip-route {
+  margin: 1.25rem 0;
+  padding-left: 0;
+}
+
+.trip-card.completed .route-point {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: var(--background-color);
+}
+
+.trip-card.completed .route-point:last-child {
+  margin-bottom: 0;
+}
+
+.trip-card.completed .route-point i {
+  font-size: 0.9rem;
+  color: var(--primary-color);
+  width: 16px;
+  text-align: center;
+}
+
+.trip-card.completed .route-point.pickup i {
+  color: var(--primary-color);
+}
+
+.trip-card.completed .route-point.dropoff i {
+  color: var(--success-color);
+}
+
+.trip-card.completed .route-point span {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Completed Ride Footer */
+.trip-card.completed .trip-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.trip-card.completed .fare {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-align: center;
+}
+
+.trip-card.completed .duration {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  padding: 0.5rem;
+  background: var(--background-color);
+  border-radius: 8px;
+}
+
+/* Payment Details */
+.payment-details {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, var(--success-color), #059669);
+  color: white;
+  border-radius: 12px;
+  margin: 0.5rem 0;
+}
+
+.payment-details i {
+  font-size: 1.1rem;
+}
+
+.earnings {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* Payment Actions */
+.payment-actions {
+  margin-top: 0.5rem;
+}
+
+.btn-request-payment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--info-color);
+  color: white;
+  text-decoration: none;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.btn-request-payment:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-request-payment:active {
+  transform: scale(0.98);
+}
+
+/* No Trips State */
+.no-trips {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--text-secondary);
+  background: var(--surface-color);
+  border-radius: 16px;
+  border: 2px dashed var(--border-color);
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* Completed Ride Specific Pagination */
+#completedRidesPagination .page-link {
+  border-color: var(--success-color);
+  color: var(--success-color);
+}
+
+#completedRidesPagination .page-link:hover {
+  background: var(--success-color);
+  color: white;
+  border-color: var(--success-color);
+}
+
+#completedRidesPagination .page-link.current {
+  background: var(--success-color);
+  color: white;
+  border-color: var(--success-color);
+}
+
+#completedRidesPagination + .pagination-info {
+  background: linear-gradient(135deg, var(--success-color), #059669);
+  color: white;
+}
+
+/* Animation for completed rides */
+@keyframes slideInCompleted {
+  from {
+      opacity: 0;
+      transform: translateX(20px);
+  }
+  to {
+      opacity: 1;
+      transform: translateX(0);
+  }
+}
+
+.trip-card.completed {
+  animation: slideInCompleted 0.4s ease;
+}
+
+/* Responsive adjustments for completed rides */
+@media (max-width: 480px) {
+  .trip-card.completed .trip-header {
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: flex-start;
+  }
+  
+  .payment-status {
+      align-self: flex-start;
+  }
+  
+  .trip-card.completed .fare {
+      font-size: 1.25rem;
+  }
+  
+  .btn-request-payment {
+      padding: 0.75rem;
+      font-size: 0.85rem;
+  }
+}
+
+/* Desktop specific styles for completed rides */
+@media (min-width: 768px) {
+  .trip-card.completed {
+      transition: all 0.3s ease;
+  }
+  
+  .trip-card.completed:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+  }
+  
+  .trip-card.completed .trip-footer {
+      flex-direction: row;
+      align-items: center;
+      flex-wrap: wrap;
+  }
+  
+  .trip-card.completed .fare {
+      flex: 1;
+      text-align: left;
+      font-size: 1.75rem;
+  }
+  
+  .trip-card.completed .duration {
+      flex: 0 0 auto;
+      margin-right: 1rem;
+  }
+  
+  .payment-details {
+      flex: 1;
+      margin: 0;
+  }
+  
+  .payment-actions {
+      flex: 1;
+      margin-top: 0;
+  }
+}
+
+/* Large screen optimizations */
+@media (min-width: 1200px) {
+  .trip-card.completed .trip-footer {
+      flex-wrap: nowrap;
+  }
+  
+  .trip-card.completed .fare {
+      flex: 2;
+  }
+  
+  .trip-card.completed .duration {
+      flex: 1;
+  }
+  
+  .payment-details {
+      flex: 2;
+  }
+  
+  .payment-actions {
+      flex: 1;
+  }
+}
+
+/* Print styles for completed rides */
+@media print {
+  .trip-card.completed {
+      break-inside: avoid;
+      border: 1px solid #ccc;
+      box-shadow: none;
+  }
+  
+  .btn-request-payment {
+      display: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .trip-card.completed {
+      border: 2px solid var(--text-primary);
+  }
+  
+  .payment-status.paid {
+      background: #000;
+      color: #fff;
+      border: 2px solid #000;
+  }
+  
+  .payment-status.pending {
+      background: #666;
+      color: #fff;
+      border: 2px solid #666;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .trip-card.completed {
+      animation: none;
+  }
+  
+  .btn-request-payment:hover {
+      transform: none;
+  }
+}

@@ -1,0 +1,65 @@
+# Builds the Tauri iOS app on a GitHub-hosted Mac, because the maintainer's
+# own Mac is too old to run a current Xcode. Manual trigger only: macOS
+# runner minutes are billed at 10x on private repos, so this never runs on
+# its own.
+#
+# Today this is an UNSIGNED simulator build: it proves the app (Rust core,
+# Swift plugin, frontend) compiles for iOS and yields a .app that runs in
+# the iOS Simulator. It cannot produce something installable on a real
+# iPhone; that needs an Apple Developer account (signing certificate,
+# provisioning profile, and later an APNs key for push). When that exists,
+# add the signing secrets and switch the build step to
+# `--export-method release-testing` (TestFlight) instead of --no-sign.
+name: iOS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "Backend API base URL baked into the app (e.g. https://xxxx.ngrok-free.dev/api/v1). Leave empty for a compile check only."
+        required: false
+        default: ""
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios-sim
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # gen/apple (the Xcode project) is generated, not committed, unlike
+      # gen/android.
+      - name: Generate the Xcode project
+        run: npx tauri ios init --ci
+
+      - name: Build for the iOS Simulator (unsigned)
+        env:
+          VITE_API_BASE_URL: ${{ inputs.api_base_url }}
+        run: npx tauri ios build --debug --target aarch64-sim --no-sign --archive-only --ci
+
+      - name: Upload the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: gocab-ios-simulator
+          path: frontend/src-tauri/gen/apple/build
+          retention-days: 3
+          if-no-files-found: warn

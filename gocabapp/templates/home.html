@@ -1,0 +1,167 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GoCab</title>
+    <meta name="description" content="Sign in or sign up for GoCab" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <meta name="theme-color" content="#1d4ed8"/>
+
+    <!-- iOS Specific -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GoCab">
+    <link rel="apple-touch-icon" href="{% static 'assets/img/apple-touch-icon.png' %}" />
+
+    <!-- Android Specific -->
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Favicons -->
+    <link rel="icon" href="{% static 'assets/img/favicon.png' %}" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <link href="{% static 'assets/css/signin.css' %}" rel="stylesheet" />
+  </head>
+
+  <body style="background-image: url('{% static 'assets/img/cool-motorcycle-studio.jpg' %}'); background-size: 200px; background-repeat: repeat;">
+    <div class="pwa-container">
+      <!-- Header -->
+      <div class="pwa-header">
+        <div class="logo">
+          <h1>GoCab</h1>
+        </div>
+        <h2>Ride or Drive, Your Way</h2>
+      </div>
+
+      <!-- Form Section -->
+      <div class="pwa-form-section">
+        {% if messages %}
+        <div class="messages">
+          {% for message in messages %}
+          <p class="{{ message.tags }}">{{ message }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="signup-container">
+          <form class="signup-form" id="home-form" action="{% url 'home' %}" method="POST">
+            {% csrf_token %}
+
+            <div class="form-group">
+              <input
+                type="email"
+                name="email"
+                id="id_email"
+                placeholder="Email Address"
+                value="{{ email|default:'' }}"
+                required
+                autocomplete="email"
+              >
+            </div>
+
+            <div class="form-group" id="code-field-wrapper" style="display:none;">
+              <input
+                type="text"
+                name="code"
+                id="id_code"
+                placeholder="6-digit code"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="one-time-code"
+              >
+            </div>
+
+            <p id="code-status" class="login-link" style="display:none;"></p>
+
+            <button type="button" class="submit-btn" id="submit-btn">
+              Continue
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // The single front door for both sign-in and sign-up (mirrors Uber's
+      // phone-number-first screen, adapted to email): "Continue" sends a
+      // code via the shared JSON API, then the same button becomes a real
+      // submit posting email+code here. gocabapp.views.auth_views.home
+      // decides whether this is an existing account (logs in) or a new one
+      // (hands off to /signup/ with the email already verified).
+      const homeForm = document.getElementById('home-form');
+      const emailInput = document.getElementById('id_email');
+      const codeFieldWrapper = document.getElementById('code-field-wrapper');
+      const codeInput = document.getElementById('id_code');
+      const codeStatus = document.getElementById('code-status');
+      const submitBtn = document.getElementById('submit-btn');
+      let codeSent = false;
+
+      function extractErrorMessage(data) {
+        if (!data) return 'Something went wrong.';
+        if (typeof data.detail === 'string') return data.detail;
+        if (Array.isArray(data.detail)) {
+          return data.detail.map((d) => d.msg).join(' ');
+        }
+        return 'Something went wrong.';
+      }
+
+      if (submitBtn) {
+        submitBtn.addEventListener('click', async () => {
+          if (codeSent) return; // button is now type=submit; let the form post normally
+
+          const email = emailInput.value.trim();
+          if (!email) {
+            emailInput.reportValidity();
+            return;
+          }
+
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Sending...';
+
+          try {
+            const response = await fetch('/api/v1/auth/request-code', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(extractErrorMessage(data));
+
+            codeStatus.textContent = data.detail;
+            codeStatus.style.display = 'block';
+            codeFieldWrapper.style.display = 'block';
+            codeInput.required = true;
+            codeInput.focus();
+
+            submitBtn.type = 'submit';
+            submitBtn.textContent = 'Continue';
+            codeSent = true;
+          } catch (err) {
+            codeStatus.textContent = err.message;
+            codeStatus.style.display = 'block';
+            submitBtn.textContent = 'Continue';
+          } finally {
+            submitBtn.disabled = false;
+          }
+        });
+      }
+
+      if (homeForm) {
+        homeForm.addEventListener('submit', () => {
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Verifying...';
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

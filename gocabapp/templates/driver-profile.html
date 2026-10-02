@@ -1,0 +1,279 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Driver Profile - GoCab</title>
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+<!-- PWA Meta Tags -->
+<meta name="theme-color" content="#08915e"/>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<!-- Favicons -->
+<link rel="icon" href="{% static 'assets/img/favicon.png' %}" />
+<link rel="apple-touch-icon" href="{% static 'assets/img/apple-touch-icon.png' %}" />
+
+<!-- iOS Specific -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GoCab">
+<link rel="apple-touch-icon" href="{% static 'assets/img/apple-touch-icon.png' %}" />
+
+<!-- Android Specific -->
+<meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+
+    <link
+      href="{% static 'assets/css/driver-profile.css' %}"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body data-user-id="{{ request.user.id }}">
+    <!-- Desktop Sidebar (hidden on mobile) -->
+    <div id="sidebar">
+      <div class="sidebar-header">
+        <a href="#" class="sidebar-logo">
+          
+          <span>🛵GoCab</span>
+        </a>
+      </div>
+
+      <ul class="sidebar-menu">
+        <li class="menu-title">MAIN</li>
+
+        <li class="menu-item">
+          <a href="{% url 'driver_dashboard' %}" class="menu-link">
+            <i class="fas fa-home"></i>
+            <span>Overview</span>
+          </a>
+        </li>
+        <li class="menu-item">
+          <a href="{% url 'driver_profile' %}" class="menu-link active">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+          </a>
+        </li>
+
+        <li class="menu-title">SETTINGS</li>
+
+        <li class="menu-item">
+          <a href="{% url 'logout' %}" class="menu-link">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+      <!-- Mobile Header -->
+      <div class="header-bar">
+        <a href="#" class="app-logo">
+          <i class="fas fa-car"></i>
+          <span>GoCab</span>
+        </a>
+        <div class="user-menu">
+          <button class="menu-toggle">
+            <i class="fas fa-ellipsis-v"></i>
+          </button>
+          <div class="dropdown-menu">
+            <a href="{% url 'driver_dashboard' %}" class="dropdown-item">
+              <i class="fas fa-home"></i>
+              <span>Overview</span>
+            </a>
+            <a href="{% url 'driver_profile' %}" class="dropdown-item">
+              <i class="fas fa-user"></i>
+              <span>Profile</span>
+            </a>
+            <a href="{% url 'logout' %}" class="dropdown-item">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="driver-dashboard">
+        <!-- Profile Header with Vehicle Focus -->
+        <div class="driver-profile-header">
+          <div class="driver-identity">
+            <div class="driver-avatar">{{ driver.initials }}</div>
+            <div class="driver-meta">
+              <h1>{{ driver.full_name }}</h1>
+              <div class="driver-status">
+                <span class="status-badge online">{{ driver.status }}</span>
+                <div class="rating">
+                  <i class="fas fa-star"></i> {{ driver.rating|floatformat:2 }}
+                  <span class="rating-count"
+                    >({{ driver.trip_count }} trips)</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="vehicle-display">
+            <div class="vehicle-card">
+              <div class="vehicle-image">
+                <img
+                  src="https://via.placeholder.com/150x80/08915e/FFFFFF?text=Toyota+Camry"
+                  alt="Vehicle"
+                />
+              </div>
+              <div class="vehicle-info">
+                <h3>{{ driver.vehicle.model }}</h3>  
+                <div class="license-plate">
+                    {{ driver.vehicle.license_plate }}
+                </div>
+                <div class="vehicle-stats">
+                    <span>
+                        <i class="fas fa-gas-pump"></i> 
+                        {{ driver.vehicle.type }} 
+                    </span>
+                    <span><i class="fas fa-user-friends"></i> 4 seats</span>
+                </div>
+            </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Driver Stats with Earnings Focus -->
+        <div class="driver-stats-grid">
+          <div class="stat-card earnings">
+            <div class="stat-header">
+              <i class="fas fa-wallet"></i>
+              <h3>Today's Earnings</h3>
+            </div>
+            <div class="stat-value">
+              ₦{{ driver.stats.total_earnings|floatformat:2|intcomma }}
+            </div>
+          </div>
+
+          <div class="stat-card trips">
+            <div class="stat-header">
+              <i class="fas fa-route"></i>
+              <h3>Completed Trips</h3>
+            </div>
+            <div class="stat-value">{{ driver.stats.completed_trips }}</div>
+          </div>
+
+          <div class="stat-card rating">
+            <div class="stat-header">
+              <i class="fas fa-star"></i>
+              <h3>Current Rating</h3>
+            </div>
+            <div class="stat-value">{{ driver.rating|floatformat:2 }}</div>
+          </div>
+        </div>
+
+        <!-- Driver Details Section -->
+        <div class="driver-details-section">
+          <div class="documents-panel">
+            <h2><i class="fas fa-file-alt"></i> Documents</h2>
+            <div class="documents-grid">
+              <div class="document-item valid">
+                <i class="fas fa-id-card"></i>
+                <span>Driver License</span>
+                <small>Verified</small>
+              </div>
+              <div class="document-item valid">
+                <i class="fas fa-file-contract"></i>
+                <span>Vehicle Insurance</span>
+                <small>Verified</small>
+              </div>
+              <div class="document-item warning">
+                <i class="fas fa-motorcycle"></i>
+                <span>Inspection</span>
+                <small>Verified</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="quick-actions">
+            <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
+            <div class="action-buttons">
+              <a href="{% url 'logout' %}" class="action-btn go-offline">
+                <i class="fas fa-power-off"></i> Logout
+              </a>
+              <a
+                href="mailto:support@gocab.auto?subject=Driver Support Request - {{ driver.full_name }}&body=Hello GoCab Support,%0D%0A%0D%0AI need assistance with:%0D%0A%0D%0ADriver: {{ driver.full_name }}%0D%0AVehicle: {{ driver.vehicle.model }} ({{ driver.vehicle.license_plate }})%0D%0A%0D%0AIssue Description:%0D%0A"
+                class="action-btn support"
+              >
+                <i class="fas fa-headset"></i> Contact Support
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation - Mobile Only -->
+    <nav class="bottom-nav">
+      <a href="{% url 'driver_dashboard' %}" class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+      </a>
+      <a href="{% url 'driver_profile' %}" class="nav-item active">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+      </a>
+      <a href="{% url 'logout' %}" class="nav-item">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+      </a>
+    </nav>
+
+    <script
+      type="module"
+      src="{% static 'assets/js/modules/driver-profile.js' %}"
+    ></script>
+
+    <!-- Mobile Interactions Script -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Mobile menu toggle
+        const menuToggle = document.querySelector(".menu-toggle");
+        const dropdownMenu = document.querySelector(".dropdown-menu");
+
+        if (menuToggle && dropdownMenu) {
+          menuToggle.addEventListener("click", function (e) {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle("active");
+          });
+
+          // Close dropdown when clicking outside
+          document.addEventListener("click", function () {
+            dropdownMenu.classList.remove("active");
+          });
+        }
+
+        // Bottom nav active state
+        document.querySelectorAll(".nav-item").forEach((item) => {
+          item.addEventListener("click", function () {
+            document
+              .querySelectorAll(".nav-item")
+              .forEach((nav) => nav.classList.remove("active"));
+            this.classList.add("active");
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

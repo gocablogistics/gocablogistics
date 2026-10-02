@@ -1,0 +1,430 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Rider Dashboard - GoCab</title>
+  <meta name="description" content="">
+  <meta name="keywords" content="">
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#08915e"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <!-- Favicons -->
+  <link rel="icon" href="{% static 'assets/img/favicon.png' %}" />
+  <link rel="apple-touch-icon" href="{% static 'assets/img/apple-touch-icon.png' %}" />
+
+  <!-- iOS Specific -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GoCab">
+  <link rel="apple-touch-icon" href="{% static 'assets/img/apple-touch-icon.png' %}" />
+  
+  <!-- Android Specific -->
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+  <link href="{% static 'assets/css/rider-dashboard.css' %}" rel="stylesheet">
+</head>
+
+<body>
+  <!-- Desktop Sidebar (hidden on mobile) -->
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <a href="{% url 'rider_dashboard' %}" class="sidebar-logo">
+        
+        <span>🛵 GoCab</span>
+      </a>
+    </div>
+
+    <ul class="sidebar-menu">
+      
+      <li class="menu-item">
+        <a href="{% url 'logout' %}" class="menu-link">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Logout</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Mobile Header -->
+    <div class="header-bar">
+      <a href="{% url 'rider_dashboard' %}" class="app-logo">
+       
+        <span>GoCab</span>
+      </a>
+      <div class="user-menu">
+        <button class="menu-toggle">
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+        <div class="dropdown-menu">
+          <a href="{% url 'logout' %}" class="dropdown-item">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+     <!-- In your rider-dashboard.html template -->
+<div id="ride-data"
+data-current-ride-id="{{ request.session.current_ride_id }}"
+data-current-ride-status="{{ request.session.current_ride_status }}"
+data-completed-fare="{{ request.session.completed_ride_fare }}"
+data-current-driver="{{ request.session.current_driver|default:'{}'|safe }}"
+data-google-maps-api-key="{{ GOOGLE_MAPS_API_KEY|default:''|escapejs }}">
+</div>
+
+
+
+
+
+    <!-- Ride Booking Card -->
+    <div class="card">
+      <!-- Compact Instructions -->
+<div class="quick-tips">
+  <div class="tip-header">
+      
+      <span>Quick Tips for Better Experience</span>
+  </div>
+  <div class="tip-content">
+      <p>Have a courier deliver something for you. Get packages delivered in the time it takes to drive there.</p>
+      <p><strong>Use landmarks:</strong> Enter nearby popular places instead of exact addresses</p>
+      <p><strong>Examples:</strong> "Ring Road", "UNIBEN Back Gate", "Ramat Park" instead of "My house"</p>
+  </div>
+</div>
+      <form id="rideForm" class="location-form">
+        {% csrf_token %}
+        <div class="location-input">
+          <div class="form-group">
+            <label for="current-location">Current Location</label>
+            <input 
+              type="text" 
+              id="current-location" 
+              name="current_location" 
+              placeholder="Pick Up Location" 
+              class="location-field"
+              required
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="destination">Where to?</label>
+            <input 
+              type="text" 
+              id="destination" 
+              name="destination" 
+              placeholder="Drop Off Location" 
+              class="location-field"
+              required
+            >
+          </div>
+          
+          <!-- Fare Estimate Display -->
+          <div id="fareEstimate" class="fare-estimate" style="display:none;">
+            <div class="fare-breakdown">
+              <h4>Estimated Fare: <span id="fareAmount">₦--.--</span></h4>
+              <p><small>Distance: <span id="distanceText">-- km</span> • Time: <span id="durationText">-- mins</span></small></p>
+              <p id="surgeNotice" style="color: orange; display:none;">
+                <i class="fas fa-bolt"></i> Surge pricing in effect (x<span id="surgeMultiplier">1.5</span>)
+              </p>
+            </div>
+          </div>
+          
+          <button type="submit" class="submit-btn">
+            <i class="fas fa-paper-plane"></i> Request Delivery
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Ride Tracking Card -->
+    <div id="rideTrackingCard" class="ride-tracking-card" style="display:none;">
+      <div class="tracking-header">
+          <div class="tracking-status">
+              <div class="status-indicator">
+                  <div class="pulse-dot"></div>
+                  <i class="fas fa-car-side"></i>
+              </div>
+              <div class="status-text">
+                  <h3 id="trackingStatus">Finding you a Dispatch Rider</h3>
+              </div>
+          </div>
+          <div class="tracking-timer">
+              <i class="fas fa-clock"></i>
+              <span id="searchTimer">00:00</span>
+          </div>
+      </div>
+  
+      <div id="searchingState" class="searching-state">
+          <div class="searching-animation">
+              <div class="search-pulse"></div>
+              <div class="floating-cars">
+                  <i class="fas fa-car car-1"></i>
+                  <i class="fas fa-car car-2"></i>
+                  <i class="fas fa-car car-3"></i>
+              </div>
+          </div>
+          <div class="searching-text">
+              <p class="searching-message">Searching for available Dispatch riders</p>
+              <div class="loading-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+              </div>
+          </div>
+      </div>
+  
+      <div id="driverAssignedState" class="driver-assigned-state" style="display:none;">
+          <div id="driverInfo">
+              <p>Dispatch Rider Name: <span id="driverName"></span></p>
+              <p>Bike Details: <span id="vehicleInfo"></span></p>
+              <p><strong>Phone:</strong> <span id="driverPhone">-</span></p>
+          </div>
+          <p>ETA: <span id="estimatedArrival"></span></p>
+      </div>
+  
+      <!-- TRIP COMPLETED STATE -->
+      <div id="tripCompletedState" class="trip-completed-state" style="display:none;">
+          <div class="completion-icon">
+              <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="completion-details">
+              <h3>Trip Completed!</h3>
+              <div class="fare-amount">
+                  <span class="fare-label">Total Fare:</span>
+                  <span class="fare-value">₦<span id="completedFareAmount">0.00</span></span>
+              </div>
+              <div class="driver-info-completed">
+                  <p><strong>Dispatch Rider Name:</strong> <span id="completedDriverName"></span></p>
+                  <p><strong>Bike Details:</strong> <span id="completedVehicleInfo"></span></p>
+              </div>
+          </div>
+      </div>
+  
+      <div class="tracking-actions">
+          <!-- Cancel Ride Button (shown during active ride) -->
+          <button id="cancelRideBtn" class="cancel-ride-btn">
+              <i class="fas fa-times"></i>
+              Cancel Ride Request
+          </button>
+  
+          <!-- Pay Now Button (shown after trip completion) -->
+          <button id="payNowBtn" class="pay-now-btn" style="display:none;">
+              <i class="fas fa-credit-card"></i>
+              Pay Now - ₦<span id="payNowAmount">0.00</span>
+          </button>
+  
+          <!-- Payment Processing (shown after clicking Pay Now) -->
+          <button id="paymentProcessingBtn" class="payment-processing-btn" style="display:none;" disabled>
+              <i class="fas fa-spinner fa-spin"></i>
+              Processing Payment...
+          </button>
+  
+          <!-- Payment Completed (shown after successful payment) -->
+          <div id="paymentCompletedState" class="payment-completed-state" style="display:none;">
+              <i class="fas fa-check-circle"></i>
+              <span>Payment Completed!</span>
+          </div>
+      </div>
+    </div>
+
+    <!-- Ride History Section -->
+    <div class="card">
+      <div class="ride-history-section">
+        <h2 class="section-title">Your Courier History</h2>
+        
+        <div class="history-filters">
+            <button class="filter-btn active">All</button>
+            <button class="filter-btn">This Week</button>
+            <button class="filter-btn">This Month</button>
+            <button class="filter-btn">Past Year</button>
+        </div>
+        
+        <div class="ride-cards">
+            {% for ride in recent_rides %}
+            <!-- Ride Card -->
+            <div class="ride-card">
+                <div class="ride-header">
+                    <div class="ride-date">{{ ride.completed_at|date:"l, g:i A" }}</div>
+                    <div class="ride-price">₦{{ ride.total_fare|floatformat:2 }}</div>
+                </div>
+                
+                <div class="ride-route">
+                    <div class="location-pin start">
+                        <i class="fas fa-circle"></i>
+                        <div class="location-text">{{ ride.current_location|truncatechars:20 }}</div>
+                    </div>
+                    <div class="route-line"></div>
+                    <div class="location-pin end">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div class="location-text">{{ ride.destination|truncatechars:20 }}</div>
+                    </div>
+                </div>
+                
+                <div class="ride-footer">
+                    <div class="driver-info">
+                        <div class="driver-avatar">
+                            {{ ride.driver.get_full_name|default:ride.driver.username|slice:":2"|upper }}
+                        </div>
+                        <div class="driver-details">
+                            <div class="driver-name">{{ ride.driver.get_full_name|default:ride.driver.username }}</div>
+                            <div class="car-info">
+                                {% if ride.driver.driver.vehicle_model %}
+                                    {{ ride.driver.driver.vehicle_model }} • {{ ride.driver.driver.license_plate }}
+                                {% else %}
+                                    Vehicle info not available
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <button class="action-btn">Details</button>
+                </div>
+
+                <!-- Payment Status Section -->
+                <div class="payment-section">
+                  {% if ride.payment_status == 'paid' %}
+                  <div class="payment-status paid">
+                      <i class="fas fa-check-circle"></i>
+                      <span>Paid</span>
+                  </div>
+                  {% else %}
+                  <div class="payment-actions">
+                      <button class="pay-now-btn" data-ride-id="{{ ride.id }}" data-amount="{{ ride.total_fare }}">
+                          <i class="fas fa-credit-card"></i>
+                          Pay ₦{{ ride.total_fare|floatformat:2 }}
+                      </button>
+                      
+                      <button class="payment-processing-btn" style="display:none;" disabled>
+                          <i class="fas fa-spinner fa-spin"></i>
+                          Processing...
+                      </button>
+                      
+                      <div class="payment-completed-state" style="display:none;">
+                          <i class="fas fa-check-circle"></i>
+                          <span>Paid</span>
+                      </div>
+                  </div>
+                  {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="no-rides">No recent rides found</div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if recent_rides.has_other_pages %}
+        <div class="pagination">
+            {% if recent_rides.has_previous %}
+                <a href="?page={{ recent_rides.previous_page_number }}" class="page-link">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            {% endif %}
+            
+            <div class="page-numbers">
+                {% for num in recent_rides.paginator.page_range %}
+                    {% if recent_rides.number == num %}
+                        <span class="page-link current">{{ num }}</span>
+                    {% elif num > recent_rides.number|add:'-3' and num < recent_rides.number|add:'3' %}
+                        <a href="?page={{ num }}" class="page-link">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            {% if recent_rides.has_next %}
+                <a href="?page={{ recent_rides.next_page_number }}" class="page-link">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Show total count info -->
+        <div class="pagination-info">
+            Showing {{ recent_rides.start_index }}-{{ recent_rides.end_index }} of {{ recent_rides.paginator.count }} rides
+        </div>
+      </div>
+    </div>
+  </main>
+
+  
+
+  <script type="module" src="{% static 'assets/js/modules/rider-dashboard.js' %}"></script>
+
+ 
+
+
+
+  
+  <!-- Mobile Interactions Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Mobile menu toggle
+      const menuToggle = document.querySelector('.menu-toggle');
+      const dropdownMenu = document.querySelector('.dropdown-menu');
+      
+      if (menuToggle && dropdownMenu) {
+        menuToggle.addEventListener('click', function(e) {
+          e.stopPropagation();
+          dropdownMenu.classList.toggle('active');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function() {
+          dropdownMenu.classList.remove('active');
+        });
+      }
+      
+      // Bottom nav active state
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function() {
+          document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+          this.classList.add('active');
+        });
+      });
+      
+      // History filter buttons
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          // Add filter logic here
+        });
+      });
+      
+      // Pay now buttons for ride history
+      document.querySelectorAll('.pay-now-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const rideId = this.dataset.rideId;
+          const amount = this.dataset.amount;
+          
+          // Show processing state
+          this.style.display = 'none';
+          const processingBtn = this.nextElementSibling;
+          processingBtn.style.display = 'inline-flex';
+          
+          // Simulate payment processing
+          setTimeout(() => {
+            processingBtn.style.display = 'none';
+            const completedState = processingBtn.nextElementSibling;
+            completedState.style.display = 'inline-flex';
+          }, 2000);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
+

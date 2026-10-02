@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-start-location-tracking"
+description = "Enables the start_location_tracking command without any pre-configured scope."
+commands.allow = ["start_location_tracking"]
+
+[[permission]]
+identifier = "deny-start-location-tracking"
+description = "Denies the start_location_tracking command without any pre-configured scope."
+commands.deny = ["start_location_tracking"]
