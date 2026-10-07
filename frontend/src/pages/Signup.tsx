@@ -946,8 +946,8 @@ export default function Signup() {
             <option value="" disabled>
               {bankOptions.length === 0 ? "Loading banks…" : "Select your bank"}
             </option>
-            {bankOptions.map((b) => (
-              <option key={b.code} value={b.code} className="text-black">
+            {bankOptions.map((b, i) => (
+              <option key={`${b.code}-${i}`} value={b.code} className="text-black">
                 {b.name}
               </option>
             ))}

@@ -15,7 +15,7 @@ from decimal import Decimal
 import requests
 from django.conf import settings
 from django.contrib.auth.models import User
-from ..utils.mailer import send_admin_mail
+from ..utils.branded_mail import send_branded_email
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
@@ -23,6 +23,7 @@ from django.utils import timezone
 from ..models import Driver, Notification, PaymentDispute, RideRequest, Rider
 from ..utils.fare_pricing import calculate_ride_fare, DRIVER_EARNINGS_RATE
 from ..utils.distance_utils import google_distance
+from ..utils.ngrok import resolve_frontend_base_url
 from ..services.ride_events import notify_rider, notify_driver_pool, notify_notification_count
 from ..services.payout_service import create_payout_for_ride, handle_transfer_webhook_event
 from ..services.push_service import send_push_to_user
@@ -425,7 +426,8 @@ def handle_payment_callback(ride_id: int, query_params) -> str:
     up is the one this ride's own checkout generated and stored server-side
     in _create_payment_link.
     """
-    fail = "/rider-dashboard/?payment=failed"
+    spa_callback = f"{resolve_frontend_base_url()}/payment-callback?ride_id={ride_id}"
+    fail = f"{spa_callback}&payment=failed"
 
     try:
         ride      = RideRequest.objects.get(id=ride_id)
@@ -459,7 +461,7 @@ def handle_payment_callback(ride_id: int, query_params) -> str:
             return f"{fail}&error=amount_mismatch"
 
         ride.refresh_from_db()
-        return f"/rider-dashboard/?payment=success&amount={ride.total_fare}&ride_id={ride.id}"
+        return f"{spa_callback}&payment=success&amount={ride.total_fare}"
 
     except RideRequest.DoesNotExist:
         logger.error("handle_payment_callback: ride %s not found", ride_id)
@@ -583,23 +585,31 @@ def _notify_admin_of_dispute(dispute: PaymentDispute, event: str) -> None:
     ride = dispute.ride
     driver_phone = getattr(getattr(ride.driver, "driver", None), "phone_number", None) if ride.driver else None
     rider_phone = getattr(getattr(ride.passenger, "rider", None), "phone_number", None)
-    admin_url = f"{settings.BASE_URL}/admin/gocabapp/paymentdispute/{dispute.id}/change/"
+    admin_url = f"{settings.ADMIN_SITE_URL}/admin/gocabapp/paymentdispute/{dispute.id}/change/"
+    driver_name = ride.driver.driver.full_name if ride.driver and hasattr(ride.driver, "driver") else "Unknown"
+    rider_name = ride.passenger.rider.full_name if hasattr(ride.passenger, "rider") else "Unknown"
 
     try:
-        send_admin_mail(
+        send_branded_email(
             subject=f"GoCab payment dispute, ride #{ride.id} ({event})",
-            message=(
-                f"Ride #{ride.id}: {ride.current_location} → {ride.destination}\n"
-                f"Fare: ₦{ride.total_fare}\n\n"
-                f"Driver: {ride.driver.driver.full_name if ride.driver and hasattr(ride.driver, 'driver') else 'Unknown'} "
-                f"({driver_phone or 'no phone on file'})\n"
-                f"Rider: {ride.passenger.rider.full_name if hasattr(ride.passenger, 'rider') else 'Unknown'} "
-                f"({rider_phone or 'no phone on file'})\n\n"
-                f"Driver's statement: {dispute.driver_statement or '(none given)'}\n"
-                f"Rider's statement: {dispute.rider_statement or '(none given)'}\n\n"
-                f"Review and resolve: {admin_url}"
-            ),
-            recipient_list=[settings.ADMIN_NOTIFICATION_EMAIL],
+            to=[settings.ADMIN_NOTIFICATION_EMAIL],
+            template_name="email/admin_alert.html",
+            context={
+                "heading": f"Payment dispute on ride #{ride.id}",
+                "intro": f"A payment dispute was raised ({event}). Please pick up the conversation and resolve it.",
+                "rows": [
+                    {"label": "Route", "value": f"{ride.current_location} to {ride.destination}"},
+                    {"label": "Fare", "value": f"₦{ride.total_fare}"},
+                    {"label": "Driver", "value": f"{driver_name} ({driver_phone or 'no phone on file'})"},
+                    {"label": "Rider", "value": f"{rider_name} ({rider_phone or 'no phone on file'})"},
+                ],
+                "note": (
+                    f"Driver's statement: {dispute.driver_statement or '(none given)'}\n\n"
+                    f"Rider's statement: {dispute.rider_statement or '(none given)'}"
+                ),
+                "button_label": "Review dispute",
+                "button_url": admin_url,
+            },
         )
     except Exception:
         # Never let a notification failure block the actual report/response.

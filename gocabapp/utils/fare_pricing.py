@@ -75,19 +75,21 @@ def calculate_ride_fare(
     rates = VEHICLE_RATES.get(vehicle_type) or VEHICLE_RATES["Bike"]
     surge = _surge_multiplier()
 
-    # Rounded to whole naira at every step (2026-10-02, client request) —
-    # not just the final total. Rounding only the total while showing
-    # unrounded kobo-level line items underneath it would make "base +
-    # distance + time" visibly fail to add up to the number shown. Keeping
-    # every number whole end to end also means total_fare * 100 is always
-    # an exact multiple of 100 kobo, so there's never a fractional-kobo
-    # amount anywhere a Paystack charge or transfer actually uses it.
+    # The total is rounded to the nearest ₦10 (2026-10-03): ₦10 is the
+    # smallest amount a Nigerian bank transfer is matched on, so an odd
+    # figure like ₦7,497 made the payer's transfer look like the wrong
+    # amount and Paystack reversed it. Line items are whole naira, and the
+    # rounding difference is absorbed into distance so they still add up.
     distance_fare = round(distance_km * rates["per_km"])
     time_fare = round(duration_min * rates["per_min"])
     subtotal = round((rates["base"] + distance_fare + time_fare) * surge)
     total = max(subtotal, round(rates["min_fare"]))
     if distance_km > 50:
         total = min(total, MAX_FARE)
+    rounded_total = ((total + 5) // 10) * 10
+    if rounded_total != total and total == subtotal and surge == 1.0:
+        distance_fare += rounded_total - total
+    total = rounded_total
 
     result = {
         "base_fare":        rates["base"],

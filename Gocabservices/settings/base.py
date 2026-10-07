@@ -119,6 +119,7 @@ RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 # Disputes still show up in Django admin either way; if this is unset, we
 # just skip the email rather than erroring the report/response request.
 ADMIN_NOTIFICATION_EMAIL = os.getenv("ADMIN_NOTIFICATION_EMAIL", "")
+ADMIN_SITE_URL = os.getenv("ADMIN_SITE_URL", "https://gocablogistics.com")
 
 # ============ AUTH ============
 AUTH_PASSWORD_VALIDATORS = [

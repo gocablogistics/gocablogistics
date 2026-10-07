@@ -21,7 +21,7 @@ from django.db.models import Sum
 
 from ..models import Driver, DriverPayout, Notification, RideRequest, WeeklyPayoutBatch
 from ..utils.fare_pricing import DRIVER_EARNINGS_RATE
-from ..utils.mailer import send_admin_mail
+from ..utils.branded_mail import send_branded_email
 from .push_service import send_push_to_user
 from .ride_events import notify_notification_count
 
@@ -480,21 +480,29 @@ def send_weekly_payout_reminder() -> dict:
         return {"drivers_owed": len(rows)}
 
     if not rows:
-        body = "No drivers have any un-paid earnings this week. Nothing to run."
+        intro = "No drivers have any un-paid earnings this week. Nothing to run."
+        driver_rows = []
+        note = None
     else:
-        lines = [f"- {r['driver__full_name']}: ₦{r['total']:,.2f}" for r in rows]
         total = sum(r["total"] for r in rows)
-        body = (
-            f"{len(rows)} driver(s) have earnings waiting to be paid out this week, "
-            f"totaling ₦{total:,.2f}.\n\n" + "\n".join(lines) +
-            f"\n\nReview and run it from Django admin: {settings.BASE_URL}/admin/gocabapp/driverpayout/"
-            "\n(select any one row, then choose \"Run this week's payout now\")"
-        )
+        intro = f"{len(rows)} driver(s) have earnings waiting to be paid out this week, totaling ₦{total:,.2f}."
+        driver_rows = [
+            {"label": r["driver__full_name"], "value": f"₦{r['total']:,.2f}"} for r in rows
+        ]
+        note = 'Select any one row in Django admin, then choose "Run this week\'s payout now".'
 
-    send_admin_mail(
+    send_branded_email(
         subject=f"GoCab weekly payout review, {len(rows)} driver(s) owed",
-        message=body,
-        recipient_list=[settings.ADMIN_NOTIFICATION_EMAIL],
+        to=[settings.ADMIN_NOTIFICATION_EMAIL],
+        template_name="email/admin_alert.html",
+        context={
+            "heading": "Weekly driver payout review",
+            "intro": intro,
+            "rows": driver_rows,
+            "note": note,
+            "button_label": "Open payouts",
+            "button_url": f"{settings.ADMIN_SITE_URL}/admin/gocabapp/driverpayout/",
+        },
     )
     logger.info("Weekly payout reminder sent: %s driver(s) owed", len(rows))
     return {"drivers_owed": len(rows)}

@@ -43,6 +43,7 @@ export default function BookingScreen({
   const [recipientPhone, setRecipientPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"online" | "cash">("online");
   const [vehicleType, setVehicleType] = useState<VehicleType>("Bike");
+  const [confirming, setConfirming] = useState(false);
   const [pickupCoords, setPickupCoords] = useState<LatLng | null>(null);
   const [destCoords, setDestCoords] = useState<LatLng | null>(null);
   const [estimate, setEstimate] = useState<FareEstimateOut | null>(null);
@@ -205,6 +206,7 @@ export default function BookingScreen({
 
   async function handleGetEstimate(e: FormEvent) {
     e.preventDefault();
+    setConfirming(false);
     setError(null);
     setEstimate(null);
     if (!currentLocation.trim() || !destination.trim()) {
@@ -482,16 +484,38 @@ export default function BookingScreen({
             <p className="text-slate-300 text-sm text-center">
               {estimate.distance_km}km, about {Math.round(estimate.duration_min)} min
             </p>
-            <button
-              type="button"
-              onClick={handleSendIt}
-              disabled={loading}
-              className="w-full py-4 rounded-full bg-[#1be451] text-neutral-900 font-bold text-lg disabled:opacity-50"
-            >
-              {loading
-                ? "Sending…"
-                : `Send it, ${estimate.currency} ${estimate.total_fare.toLocaleString()}`}
-            </button>
+            {confirming ? (
+              <>
+                <p className="text-white text-center font-semibold">
+                  Confirm booking for {estimate.currency} {estimate.total_fare.toLocaleString()}?
+                </p>
+                <button
+                  type="button"
+                  onClick={handleSendIt}
+                  disabled={loading}
+                  className="w-full py-4 rounded-full bg-[#1be451] text-neutral-900 font-bold text-lg disabled:opacity-50"
+                >
+                  {loading ? "Booking…" : "Yes, book ride"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  disabled={loading}
+                  className="w-full py-3 rounded-full border border-white/20 text-white font-semibold disabled:opacity-50"
+                >
+                  Not yet
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                disabled={loading}
+                className="w-full py-4 rounded-full bg-[#1be451] text-neutral-900 font-bold text-lg disabled:opacity-50"
+              >
+                Book ride, {estimate.currency} {estimate.total_fare.toLocaleString()}
+              </button>
+            )}
           </div>
         )}
 

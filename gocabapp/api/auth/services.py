@@ -2,7 +2,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from ...utils.mailer import send_admin_mail
+from ...utils.branded_mail import send_branded_email
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from ninja.errors import HttpError
@@ -22,16 +22,23 @@ def _notify_admin_of_new_driver(driver: Driver) -> None:
     if not settings.ADMIN_NOTIFICATION_EMAIL:
         return
 
-    admin_url = f"{settings.BASE_URL}/admin/gocabapp/driver/{driver.id}/change/"
+    admin_url = f"{settings.ADMIN_SITE_URL}/admin/gocabapp/driver/{driver.id}/change/"
     try:
-        send_admin_mail(
+        send_branded_email(
             subject=f"GoCab: new driver awaiting approval, {driver.full_name}",
-            message=(
-                f"{driver.full_name} ({driver.phone_number}) just signed up as a "
-                f"{driver.vehicle_type} driver and is awaiting approval.\n\n"
-                f"Review in Django admin: {admin_url}"
-            ),
-            recipient_list=[settings.ADMIN_NOTIFICATION_EMAIL],
+            to=[settings.ADMIN_NOTIFICATION_EMAIL],
+            template_name="email/admin_alert.html",
+            context={
+                "heading": "New driver awaiting approval",
+                "intro": f"{driver.full_name} just signed up as a {driver.vehicle_type} driver.",
+                "rows": [
+                    {"label": "Name", "value": driver.full_name},
+                    {"label": "Phone", "value": driver.phone_number},
+                    {"label": "Vehicle", "value": driver.vehicle_type},
+                ],
+                "button_label": "Review driver",
+                "button_url": admin_url,
+            },
         )
     except Exception:
         logger.exception("Failed to email admin about new driver id=%s", driver.id)

@@ -1,0 +1,26 @@
+{% extends "email/base.html" %}
+{% block title %}{{ heading }}{% endblock %}
+{% block content %}
+<h2 style="font-size:20px;color:#20241f;margin:0 0 8px;">{{ heading }}</h2>
+{% if intro %}
+<p style="font-size:15px;color:#333333;line-height:1.5;margin:0 0 22px;">{{ intro }}</p>
+{% endif %}
+{% if rows %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 22px;">
+  {% for row in rows %}
+  <tr>
+    <td style="padding:10px 0;border-bottom:1px solid #eeeeee;font-size:13px;color:#888888;width:36%;vertical-align:top;">{{ row.label }}</td>
+    <td style="padding:10px 0;border-bottom:1px solid #eeeeee;font-size:14px;color:#222222;vertical-align:top;">{{ row.value }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% if note %}
+<p style="font-size:14px;color:#555555;line-height:1.5;white-space:pre-line;margin:0 0 22px;">{{ note }}</p>
+{% endif %}
+{% if button_url %}
+<p style="text-align:center;margin:8px 0 28px;">
+  <a href="{{ button_url }}" style="display:inline-block;background-color:#1be451;color:#0b2e16;font-weight:bold;font-size:15px;padding:14px 26px;border-radius:10px;text-decoration:none;">{{ button_label }}</a>
+</p>
+{% endif %}
+{% endblock %}

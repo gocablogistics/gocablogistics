@@ -485,12 +485,7 @@ def initiate_payment(request, ride_id: int):
     # template flow _create_payment_link defaults to. resolve_frontend_base_url
     # transparently swaps in a live ngrok URL instead of FRONTEND_BASE_URL
     # when demoing to a client through a tunnel — see gocabapp/utils/ngrok.py.
-    from urllib.parse import quote as urlquote
-    confirm_token = urlquote(make_payment_confirm_token(ride_id))
-    callback_url = (
-        f"{resolve_frontend_base_url()}/payment-callback"
-        f"?ride_id={ride_id}&confirm_token={confirm_token}"
-    )
+    callback_url = f"{settings.BASE_URL}/payment/success/{ride_id}/"
     body, status = initiate_checkout_for_ride(request.user, ride_id, callback_url=callback_url)
     return JsonResponse(body, status=status)
 
@@ -869,8 +864,7 @@ def driver_active_ride(request):
 
 @router.get("/driver/summary", response=DriverSummaryOut, auth=JWTAuth())
 def driver_summary(request):
-    """Same stats/aggregation approach as rider_views.driver_dashboard —
-    aggregate the real total_fare field, then apply the driver's cut."""
+    """Aggregate the real total_fare field, then apply the driver's cut."""
     if not hasattr(request.user, "driver"):
         raise HttpError(403, "Driver profile not found")
 

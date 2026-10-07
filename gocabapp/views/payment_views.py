@@ -4,11 +4,9 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden, JsonResponse
-from django.shortcuts import redirect
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from ..models import RideRequest
 from ..services.payment_service import (
     estimate_fare_from_locations,
     handle_payment_callback,
@@ -46,13 +44,29 @@ def initiate_payment(request, ride_id):
     return JsonResponse(body, status=status)
 
 
-@login_required
 def payment_success(request, ride_id):
-    # This URL is Paystack's browser-redirect target, so it's reachable
-    # by anyone in the sense that the URL isn't secret — but it must never
-    # let a caller mark a ride they don't own as paid. Ownership check first,
-    # unrelated to handle_payment_callback's own reference/amount checks.
-    if not RideRequest.objects.filter(id=ride_id, passenger=request.user).exists():
-        return HttpResponseForbidden("Not your ride.")
-    url = handle_payment_callback(ride_id, request.GET)
-    return redirect(url)
+    # Paystack's browser redirect lands here with no app session, so this
+    # page can't require login. It's safe without one: handle_payment_callback
+    # only marks a ride paid after Paystack itself confirms the ride's stored
+    # reference succeeded, so a stranger hitting this URL changes nothing.
+    paid = "payment=success" in handle_payment_callback(ride_id, request.GET)
+    return HttpResponse(_payment_result_page(paid), content_type="text/html")
+
+
+def _payment_result_page(paid: bool) -> str:
+    if paid:
+        title = "Payment received"
+        message = "Your payment went through. Go back to the GoCab app, your ride status will update automatically."
+        colour = "#1be451"
+    else:
+        title = "Payment not completed"
+        message = "We could not confirm this payment. Go back to the GoCab app and try again, or contact support if money was debited."
+        colour = "#f87171"
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title}</title></head>
+<body style="margin:0;background:#20241f;color:#fff;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;box-sizing:border-box;">
+<div style="max-width:420px;text-align:center;">
+<h1 style="color:{colour};font-size:26px;margin:0 0 16px;">{title}</h1>
+<p style="font-size:16px;line-height:1.5;margin:0;">{message}</p>
+</div></body></html>"""

@@ -6,7 +6,7 @@ from django.contrib import admin
 from .models import *
 from django.contrib import admin
 from django.contrib.admin.helpers import ActionForm
-from django.core.mail import send_mail
+from .utils.branded_mail import send_branded_email
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -146,18 +146,11 @@ class DriverAdmin(admin.ModelAdmin):
             updated += 1
             if driver.user.email:
                 try:
-                    send_mail(
+                    send_branded_email(
                         subject="GoCab: your driver documents need another look",
-                        message=(
-                            f"Hi {driver.full_name},\n\n"
-                            "We reviewed your driver application and found an issue with "
-                            "what you uploaded"
-                            + (f":\n\n{reason}\n\n" if reason else ".\n\n")
-                            + "Please check your documents and reach out to support to resubmit. "
-                            "Once corrected, log back in to try again."
-                        ),
-                        from_email=None,
-                        recipient_list=[driver.user.email],
+                        to=[driver.user.email],
+                        template_name="email/driver_notice.html",
+                        context={"name": driver.full_name, "reason": reason},
                     )
                 except Exception:
                     logger.exception("Failed to email driver id=%s about rejection", driver.id)

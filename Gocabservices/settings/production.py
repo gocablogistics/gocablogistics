@@ -1,3 +1,4 @@
+from corsheaders.defaults import default_headers
 from .base import *
 import dj_database_url
 import redis
@@ -5,9 +6,14 @@ import redis
 DEBUG = False
 WHITENOISE_AUTOREFRESH = False
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", 'goacab.onrender.com']
-CSRF_TRUSTED_ORIGINS = ["https://goacab.onrender.com", "https://*.onrender.com"]
-CORS_ALLOWED_ORIGINS = ["https://goacab.onrender.com"]
+PUBLIC_HOSTS = [h.strip() for h in os.getenv("PUBLIC_HOSTS", "").split(",") if h.strip()]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", *PUBLIC_HOSTS]
+CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in PUBLIC_HOSTS]
+CORS_ALLOWED_ORIGINS = [f"https://{h}" for h in PUBLIC_HOSTS] + [
+    "http://tauri.localhost",
+    "https://tauri.localhost",
+]
+CORS_ALLOW_HEADERS = list(default_headers)
 
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True

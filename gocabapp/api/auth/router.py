@@ -188,8 +188,7 @@ def delete_account(request):
 
 @router.post("/switch-role/{role}", response=TokenPairOut, auth=JWTAuth())
 def switch_role(request, role: str):
-    # Mirrors the web app's account-menu role switcher (gocabapp.views.
-    # auth_views.switch_role) for dual-role accounts — mints a fresh token
+    # Role switcher for dual-role accounts — mints a fresh token
     # pair scoped to the other role rather than a session flag, since
     # mobile clients don't have a Django session to store it in.
     if role not in ("rider", "driver"):

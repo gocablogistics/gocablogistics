@@ -1,4 +1,5 @@
 import json
+import secrets
 import logging
 
 from django.conf import settings
@@ -147,12 +148,15 @@ def handle_unexpected_exception(request, exc: Exception):
         import sentry_sdk
 
         event_id = sentry_sdk.capture_exception(exc)
-    logger.exception("Unhandled exception in API request: %s %s", request.method, request.path)
+    error_code = f"GC-{(event_id or secrets.token_hex(4)).upper()[:8]}"
+    logger.exception(
+        "Unhandled exception [%s] in API request: %s %s", error_code, request.method, request.path
+    )
     return api.create_response(
         request,
         {
             "detail": "Something went wrong on our end. Please try again in a few moments.",
-            "error_id": event_id,
+            "error_id": error_code,
         },
         status=500,
     )

@@ -53,7 +53,7 @@ export class ApiError extends Error {
       }
       if (typeof b.error_id === "string") errorId = b.error_id;
     }
-    super(detail);
+    super(import.meta.env.DEV && errorId ? `${detail} (Ref: ${errorId})` : detail);
     this.status = status;
     this.body = body;
     this.errorId = errorId;

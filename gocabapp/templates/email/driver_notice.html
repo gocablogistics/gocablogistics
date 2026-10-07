@@ -1,0 +1,15 @@
+{% extends "email/base.html" %}
+{% block title %}Your driver documents need another look{% endblock %}
+{% block content %}
+<h2 style="font-size:20px;color:#20241f;margin:0 0 18px;">Your documents need another look</h2>
+<p style="font-size:15px;color:#333333;line-height:1.6;margin:0 0 16px;">Hi {{ name }},</p>
+<p style="font-size:15px;color:#333333;line-height:1.6;margin:0 0 16px;">We reviewed your driver application and found an issue with what you uploaded.</p>
+{% if reason %}
+<div style="background-color:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:16px 18px;margin:0 0 20px;">
+  <p style="font-size:13px;color:#9a3412;font-weight:bold;margin:0 0 6px;">What needs fixing</p>
+  <p style="font-size:14px;color:#333333;line-height:1.5;margin:0;white-space:pre-line;">{{ reason }}</p>
+</div>
+{% endif %}
+<p style="font-size:15px;color:#333333;line-height:1.6;margin:0 0 16px;">Please check your documents and contact GoCab support to resubmit. Once corrected, log back in to try again.</p>
+<p style="font-size:15px;color:#333333;line-height:1.6;margin:0 0 28px;">Thank you,<br><strong>The GoCab team</strong></p>
+{% endblock %}

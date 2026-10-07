@@ -9,7 +9,7 @@ import logging
 from datetime import timedelta
 
 from django.conf import settings
-from ..utils.mailer import send_admin_mail
+from ..utils.branded_mail import send_branded_email
 from django.utils import timezone
 
 from ..models import RideRequest
@@ -28,12 +28,19 @@ def _notify_admin_stale(ride: RideRequest, subject_suffix: str, body: str) -> No
     if not settings.ADMIN_NOTIFICATION_EMAIL:
         return
 
-    admin_url = f"{settings.BASE_URL}/admin/gocabapp/riderequest/{ride.id}/change/"
+    admin_url = f"{settings.ADMIN_SITE_URL}/admin/gocabapp/riderequest/{ride.id}/change/"
     try:
-        send_admin_mail(
+        send_branded_email(
             subject=f"GoCab stale ride #{ride.id}, {subject_suffix}",
-            message=f"{body}\n\nReview: {admin_url}",
-            recipient_list=[settings.ADMIN_NOTIFICATION_EMAIL],
+            to=[settings.ADMIN_NOTIFICATION_EMAIL],
+            template_name="email/admin_alert.html",
+            context={
+                "heading": f"Stale ride #{ride.id}",
+                "intro": subject_suffix[0].upper() + subject_suffix[1:] + ".",
+                "note": body,
+                "button_label": "Review ride",
+                "button_url": admin_url,
+            },
         )
     except Exception:
         # Never let a notification failure block the rest of the sweep.
