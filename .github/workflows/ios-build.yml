@@ -1,0 +1,85 @@
+# .github/workflows/ios-build.yml
+#
+# The iOS build genuinely cannot run anywhere else: `tauri ios init` itself
+# (not just `ios build`) needs a full Xcode 15.3+ install, which needs
+# macOS 13+ — confirmed directly against this project's Mac (a 2015 MBP
+# capped at macOS 12), which can't even scaffold the iOS project, let
+# alone build it. So unlike Android, there is no local fallback at all;
+# every run of this workflow is the only way to produce an iOS build.
+#
+# Scope deliberately stops at producing a signed .ipa as a downloadable
+# artifact — it does NOT auto-upload to TestFlight/App Store Connect.
+# Apple's own CLI upload story is in flux (`altool --upload-app` is being
+# phased out, its replacement isn't settled enough to script blind into a
+# real CI run against a live Apple account). Until that's verified for
+# real, download the artifact from the workflow run and upload it via
+# Apple's own Transporter app (free on the Mac App Store, drag-and-drop) —
+# safer than guessing a CLI command against production Apple infrastructure.
+name: iOS Build
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,x86_64-apple-ios,aarch64-apple-ios-sim
+
+      # Same mistake as the Android build bit us once already (see
+      # frontend/package.json's android:build script) — the frontend's
+      # dev-only .env.local points API calls at a relative path that only
+      # works with Vite's local dev-server proxy. Forcing the real absolute
+      # URL here, explicitly, the same way, so it can't happen again.
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: https://api.gocablogistics.com/api/v1
+
+      # Tauri's docs document exactly these three env vars for App Store
+      # Connect API key signing in CI — see https://v2.tauri.app/distribute/sign/ios/.
+      # The key file's path is explicit (APPLE_API_KEY_PATH), not
+      # auto-discovered, but it's named the way Apple's own tooling expects
+      # (AuthKey_<KeyID>.p8) in case anything underneath also looks for it.
+      - name: Decode App Store Connect API key
+        run: |
+          mkdir -p "$HOME/private_keys"
+          echo "${{ secrets.APPLE_API_KEY_P8_BASE64 }}" | base64 --decode > "$HOME/private_keys/AuthKey_${{ secrets.APPLE_API_KEY }}.p8"
+
+      - name: Init iOS project
+        working-directory: frontend
+        run: npm run tauri -- ios init
+        env:
+          APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+
+      - name: Build iOS app
+        working-directory: frontend
+        run: npm run tauri -- ios build --export-method app-store-connect --ci
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_PATH: /Users/runner/private_keys/AuthKey_${{ secrets.APPLE_API_KEY }}.p8
+          APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+
+      # Wildcarded rather than a guessed exact path — this is the first
+      # real run of this pipeline, with no way to have tested locally what
+      # Tauri actually names the output or which subfolder it lands in.
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gocab-ios-ipa
+          path: frontend/src-tauri/gen/apple/**/*.ipa
+          if-no-files-found: error
