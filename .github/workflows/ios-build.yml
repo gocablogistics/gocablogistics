@@ -69,6 +69,20 @@ jobs:
         env:
           APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
 
+      # `tauri ios init` creates gen/apple's Xcode asset catalog seeded with
+      # Tauri's own placeholder icon, not src-tauri/icons/ios/'s real GoCab
+      # icon set — confirmed this is a known Tauri CLI quirk (other projects
+      # hit the identical bug), not something specific to this setup.
+      # `tauri icon` only overwrites that catalog if it's rerun *after* init,
+      # once gen/apple actually exists; run before init, it only writes back
+      # to src-tauri/icons/ios/ itself, never touching gen/apple. Every build
+      # so far skipped this step, which is why TestFlight showed Tauri's
+      # default icon instead of GoCab's logo despite icons/ios/ being correct
+      # the whole time.
+      - name: Regenerate app icons into the Xcode project
+        working-directory: frontend
+        run: npm run tauri -- icon src-tauri/icons/icon.png
+
       - name: Build iOS app
         working-directory: frontend
         run: npm run tauri -- ios build --export-method app-store-connect --ci
