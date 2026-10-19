@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Merged into the generated iOS Info.plist by `tauri ios init`/`ios build`
+  (per Tauri's docs: a custom Info.plist at the src-tauri root is merged
+  with the CLI-generated one), so this survives gen/apple being wiped and
+  regenerated fresh on every CI run.
+
+  The server's TLS is already fully modern (TLS 1.2/1.3, ECDHE forward
+  secrecy, Let's Encrypt) and meets Apple's default ATS requirements on
+  paper — confirmed directly against the live server, not assumed. This
+  exception is narrowly scoped to just the one real API domain (not a
+  blanket NSAllowsArbitraryLoads) as the best next guess for why requests
+  from the iOS build aren't reaching the server at all: WKWebView applies
+  some ATS checks (e.g. Certificate Transparency) beyond a plain TLS
+  handshake that a compliant-on-paper server can still fail silently.
+-->
+<plist version="1.0">
+<dict>
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSExceptionDomains</key>
+    <dict>
+      <key>api.gocablogistics.com</key>
+      <dict>
+        <key>NSExceptionRequiresForwardSecrecy</key>
+        <false/>
+        <key>NSIncludesSubdomains</key>
+        <true/>
+      </dict>
+    </dict>
+  </dict>
+</dict>
+</plist>
