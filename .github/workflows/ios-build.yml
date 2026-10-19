@@ -23,6 +23,17 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    # Job-level, not just on the explicit "Build frontend" step below: Tauri's
+    # `beforeBuildCommand` (`npm run build`) also reruns automatically inside
+    # `tauri ios build` itself, with none of a prior step's env vars carried
+    # over. That second, implicit build was silently clobbering the first
+    # one's correctly-built dist/ with the http://127.0.0.1:8000 dev fallback
+    # (confirmed live via Safari's remote Web Inspector on a real device —
+    # every request was going to 127.0.0.1:8000, not production, which is why
+    # OTP send failed with "could not connect to the server" on every build
+    # so far, unrelated to all the CORS/ATS/TLS fixes tried before this).
+    env:
+      VITE_API_BASE_URL: https://api.gocablogistics.com/api/v1
     steps:
       - uses: actions/checkout@v4
 
@@ -38,16 +49,9 @@ jobs:
         with:
           targets: aarch64-apple-ios,x86_64-apple-ios,aarch64-apple-ios-sim
 
-      # Same mistake as the Android build bit us once already (see
-      # frontend/package.json's android:build script) — the frontend's
-      # dev-only .env.local points API calls at a relative path that only
-      # works with Vite's local dev-server proxy. Forcing the real absolute
-      # URL here, explicitly, the same way, so it can't happen again.
       - name: Build frontend
         working-directory: frontend
         run: npm run build
-        env:
-          VITE_API_BASE_URL: https://api.gocablogistics.com/api/v1
 
       # Tauri's docs document exactly these three env vars for App Store
       # Connect API key signing in CI — see https://v2.tauri.app/distribute/sign/ios/.
