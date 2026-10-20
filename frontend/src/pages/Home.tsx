@@ -25,7 +25,12 @@ export default function Home() {
     if (!loading && user) navigate(destination, { replace: true });
   }, [loading, user, destination, navigate]);
 
-  if (loading) return <Loader />;
+  // `loading` can flip to false on the render *before* this effect actually
+  // fires the navigate above — `user` is already set by then, so checking
+  // it here too (not just `loading`) keeps the loader up through that one
+  // extra render instead of letting the marketing page paint for a frame
+  // first.
+  if (loading || user) return <Loader />;
 
   return (
     <div className="relative w-full max-w-[480px] mx-auto min-h-dvh bg-[#20241f] overflow-hidden flex flex-col text-slate-100">
