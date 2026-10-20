@@ -1,12 +1,31 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import SlideToContinue from "../components/SlideToContinue";
+import Loader from "../components/Loader";
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   const destination = user ? (user.role === "driver" ? "/driver" : "/rider") : "/login";
+
+  // On a cold relaunch with a stored session, AuthContext's rehydration
+  // (refresh token -> /auth/me) is still in flight here — `user` is still
+  // null during that window, and LaunchScreen's own loading gate is
+  // deliberately skipped whenever a refresh token exists in storage (see
+  // App.tsx's shouldShowLaunchScreen), so nothing else was holding this
+  // page back. Without this, a fast "slide to continue" fired off the
+  // stale null user and sent an already-logged-in returning user to
+  // /login instead of straight back into their account. Once loading
+  // resolves with a real user, skip the manual slide entirely too — a
+  // returning, already-authenticated user shouldn't have to re-confirm
+  // intent to open an app they already have an account in.
+  useEffect(() => {
+    if (!loading && user) navigate(destination, { replace: true });
+  }, [loading, user, destination, navigate]);
+
+  if (loading) return <Loader />;
 
   return (
     <div className="relative w-full max-w-[480px] mx-auto min-h-dvh bg-[#20241f] overflow-hidden flex flex-col text-slate-100">
