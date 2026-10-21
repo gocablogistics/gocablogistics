@@ -30,5 +30,17 @@
       </dict>
     </dict>
   </dict>
+  <!-- Driver signup's selfie step uses a plain HTML <input capture="user">
+       (Signup.tsx), which on iOS invokes the camera in-process via WKWebView
+       — iOS requires this string before that access, with no error dialog
+       on a missing one: the app just gets killed instantly the moment the
+       picker tries to open. The other upload steps (license, NIN slip,
+       vehicle photo) use <input accept="image/*"> without capture, but
+       iOS's picker for that still offers a "Take Photo" option, so this
+       covers those too, not just the selfie step. -->
+  <key>NSCameraUsageDescription</key>
+  <string>GoCab needs camera access so drivers can take a selfie and document photos during registration.</string>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>GoCab needs photo library access so drivers can upload existing photos of their documents during registration.</string>
 </dict>
 </plist>
