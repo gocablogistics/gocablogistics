@@ -40,13 +40,13 @@ let package = Package(
                 .byName(name: "Tauri"),
                 .product(name: "FirebaseMessaging", package: "firebase-ios-sdk"),
             ],
-            path: "Sources")
-            // GoogleService-Info.plist is NOT declared as a resource yet —
-            // the file doesn't exist in this repo yet (needs to come from
-            // Firebase Console, see GocabNativePlugin.swift's
-            // configureFirebaseIfPossible). Declaring a resource that
-            // doesn't exist fails the whole package's resolution, not just
-            // the push feature, so this stays unset until the real file
-            // lands alongside it.
+            path: "Sources",
+            // Bundled into this target's own resource bundle, loaded via
+            // Bundle.module in configureFirebaseIfPossible — not Bundle.main,
+            // since there's no way to place a file into the generated
+            // gen/apple app target directly (see that function's comment).
+            // .copy, not .process: a plist with real config values should
+            // land in the bundle byte-for-byte, not get re-processed.
+            resources: [.copy("GoogleService-Info.plist")])
     ]
 )

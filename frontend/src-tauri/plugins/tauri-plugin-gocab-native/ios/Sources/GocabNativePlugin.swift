@@ -21,11 +21,12 @@ import WebKit
 //    UIBackgroundModes entry is iOS's equivalent of "keep running while
 //    backgrounded"). Needs NSLocationAlwaysAndWhenInUseUsageDescription and
 //    the location background mode in Info.plist.
-//  - getFcmToken: real, IF GoogleService-Info.plist has actually been added
-//    to this package (see configureFirebaseIfPossible) — rejects with a
-//    clear "not configured" message otherwise rather than hanging. WKWebView
-//    apps can't receive the APNs device token through any normal Tauri/UIKit
-//    hook, so this injects application:didRegisterForRemoteNotifications...
+//  - getFcmToken: real — GoogleService-Info.plist is bundled as a resource
+//    on this target (see Package.swift) and loaded in
+//    configureFirebaseIfPossible, which falls back to a clear "not
+//    configured" rejection instead of hanging if that file is ever missing.
+//    WKWebView apps can't receive the APNs device token through any normal
+//    Tauri/UIKit hook, so this injects application:didRegisterForRemoteNotifications...
 //    onto the Tao-generated AppDelegate class at runtime via class_addMethod
 //    (confirmed working pattern, adapted from tauri-plugin-mobile-push's
 //    iOS implementation — no generated file ever needs editing, which
