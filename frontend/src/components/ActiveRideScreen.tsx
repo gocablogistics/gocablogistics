@@ -6,7 +6,9 @@ import NavDrawer from "./NavDrawer";
 import ChatPanel from "./ChatPanel";
 import RideMap from "./RideMap";
 import RateRide from "./RateRide";
+import ReceiptModal from "./ReceiptModal";
 import { formatDistance } from "../lib/formatDistance";
+import { onPrimaryPress } from "../lib/haptics";
 import { useElementHeight } from "../hooks/useElementHeight";
 
 interface ActiveRideScreenProps {
@@ -42,7 +44,8 @@ interface ActiveRideScreenProps {
   onOpenChat: () => void;
   onCloseChat: () => void;
   sendingMessage: boolean;
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string) => Promise<boolean>;
+  chatError: string | null;
   onBookAnother: () => void;
   onLogout: () => void;
 }
@@ -90,6 +93,7 @@ export default function ActiveRideScreen({
   onCloseChat,
   sendingMessage,
   onSendMessage,
+  chatError,
   onBookAnother,
   onLogout,
 }: ActiveRideScreenProps) {
@@ -102,29 +106,8 @@ export default function ActiveRideScreen({
   // otherwise re-renders on a fixed clock while a ride just sits pending.
   const [now, setNow] = useState(() => Date.now());
   const [showReportDriver, setShowReportDriver] = useState(false);
-  const [trackingShared, setTrackingShared] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
   const [sheetRef, sheetHeight] = useElementHeight<HTMLDivElement>();
-
-  async function handleShareTracking() {
-    if (!ride.tracking_url) return;
-    const text = `Track your GoCab delivery here: ${ride.tracking_url}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ text });
-        return;
-      }
-    } catch {
-      // Cancelled the share sheet, or the platform doesn't really support
-      // it despite the API being present — fall through to copy.
-    }
-    try {
-      await navigator.clipboard.writeText(text);
-      setTrackingShared(true);
-      setTimeout(() => setTrackingShared(false), 2000);
-    } catch {
-      // Clipboard blocked — nothing more to do silently.
-    }
-  }
 
   useEffect(() => {
     getFeatureFlags().then((flags) => {
@@ -144,7 +127,7 @@ export default function ActiveRideScreen({
   const showNoDriversMessage = ride.status === "pending" && pendingMinutes >= noDriversMinutes;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#20241f]">
+    <div className="screen-shell fixed inset-0 flex flex-col bg-[#20241f]">
       <RideMap
         fullScreen
         dark
@@ -277,13 +260,28 @@ export default function ActiveRideScreen({
 
         {ride.driver && (ride.status === "accepted" || ride.status === "started") && (
           <div className="flex gap-2">
-            <a
-              href={`tel:${ride.driver.phone}`}
-              className="flex-1 py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold flex items-center justify-center gap-2"
-            >
-              <i className="fa-solid fa-phone" />
-              Call driver
-            </a>
+            {/* The backend sends the literal string "Not available" when the
+                driver has no phone_number on file — rendering that straight
+                into a tel: href used to look like a working button that
+                silently did nothing on tap (invalid tel: URI, no error).
+                Disable it instead so it's honest about not being callable. */}
+            {ride.driver.phone && ride.driver.phone !== "Not available" ? (
+              <a
+                href={`tel:${ride.driver.phone}`}
+                className="flex-1 py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-phone" />
+                Call driver
+              </a>
+            ) : (
+              <button
+                disabled
+                className="flex-1 py-3 rounded-full bg-white/5 border border-white/10 text-slate-500 font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
+              >
+                <i className="fa-solid fa-phone" />
+                No phone on file
+              </button>
+            )}
             <button
               onClick={onOpenChat}
               className="relative flex-1 py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold flex items-center justify-center gap-2"
@@ -299,21 +297,12 @@ export default function ActiveRideScreen({
           </div>
         )}
 
-        {ride.tracking_url && (ride.status === "accepted" || ride.status === "started") && (
-          <button
-            onClick={handleShareTracking}
-            className="w-full py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold flex items-center justify-center gap-2"
-          >
-            <i className="fa-solid fa-share-nodes" />
-            {trackingShared ? "Copied!" : "Share tracking with recipient"}
-          </button>
-        )}
-
         {CANCELLABLE_STATUSES.includes(ride.status) && (
           <button
             onClick={onCancel}
+            onPointerDown={onPrimaryPress}
             disabled={cancelling}
-            className="w-full py-3 rounded-full bg-white/10 border border-white/20 text-red-400 font-semibold disabled:opacity-50"
+            className="ripple-surface w-full py-3 rounded-full bg-white/10 border border-white/20 text-red-400 font-semibold disabled:opacity-50"
           >
             {cancelling ? "Cancelling…" : "Cancel ride"}
           </button>
@@ -323,6 +312,13 @@ export default function ActiveRideScreen({
         {ride.status === "completed" && ride.payment_status === "paid" && (
           <div className="flex flex-col gap-3">
             <p className="text-[#1be451] font-semibold text-center">Paid</p>
+            <button
+              onClick={() => setShowReceipt(true)}
+              className="w-full py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-receipt" />
+              Show receipt to driver
+            </button>
             {accessToken && <RateRide rideId={ride.ride_id} accessToken={accessToken} raterLabel="driver" />}
             <button
               onClick={onBookAnother}
@@ -331,6 +327,20 @@ export default function ActiveRideScreen({
               Book another ride
             </button>
           </div>
+        )}
+
+        {showReceipt && (
+          <ReceiptModal
+            rideId={ride.ride_id}
+            pickup={ride.current_location}
+            destination={ride.destination}
+            otherPartyName={ride.driver?.name ?? null}
+            amount={ride.total_fare}
+            paymentMethod={ride.payment_method}
+            paidAt={ride.paid_at ?? null}
+            reference={ride.payment_reference ?? null}
+            onClose={() => setShowReceipt(false)}
+          />
         )}
 
         {ride.status === "completed" && ride.payment_status !== "paid" && (
@@ -390,11 +400,12 @@ export default function ActiveRideScreen({
               <div className="flex gap-2">
                 <button
                   onClick={onPay}
+                  onPointerDown={onPrimaryPress}
                   disabled={paying}
                   className={
                     cashEnabled
-                      ? "flex-1 py-3 rounded-full bg-[#1be451] text-neutral-900 font-bold disabled:opacity-50"
-                      : "w-full py-4 rounded-full bg-[#1be451] text-neutral-900 font-bold text-lg disabled:opacity-50"
+                      ? "ripple-surface flex-1 py-3 rounded-full bg-[#1be451] text-neutral-900 font-bold disabled:opacity-50"
+                      : "ripple-surface w-full py-4 rounded-full bg-[#1be451] text-neutral-900 font-bold text-lg disabled:opacity-50"
                   }
                 >
                   {paying ? "Starting…" : "Pay online"}
@@ -458,6 +469,7 @@ export default function ActiveRideScreen({
         otherPartyName={ride.driver?.name}
         onSend={onSendMessage}
         sending={sendingMessage}
+        sendError={chatError}
       />
     </div>
   );

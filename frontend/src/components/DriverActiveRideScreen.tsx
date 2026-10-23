@@ -35,7 +35,8 @@ interface DriverActiveRideScreenProps {
   onOpenChat: () => void;
   onCloseChat: () => void;
   sendingMessage: boolean;
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string) => Promise<boolean>;
+  chatError: string | null;
   onDone: () => void;
   onLogout: () => void;
 }
@@ -73,6 +74,7 @@ export default function DriverActiveRideScreen({
   onCloseChat,
   sendingMessage,
   onSendMessage,
+  chatError,
   onDone,
   onLogout,
 }: DriverActiveRideScreenProps) {
@@ -90,7 +92,7 @@ export default function DriverActiveRideScreen({
         : null;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#20241f]">
+    <div className="screen-shell fixed inset-0 flex flex-col bg-[#20241f]">
       {(ride.status === "accepted" || ride.status === "started") && (
         <RideMap
           fullScreen
@@ -200,13 +202,29 @@ export default function DriverActiveRideScreen({
 
         {(ride.status === "accepted" || ride.status === "started") && (
           <div className="flex gap-2">
-            <a
-              href={`tel:${ride.passenger.phone}`}
-              className="flex-1 py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold flex items-center justify-center gap-2"
-            >
-              <i className="fa-solid fa-phone" />
-              Call passenger
-            </a>
+            {/* The backend sends the literal string "Not available" when the
+                passenger has no phone_number on file — rendering that
+                straight into a tel: href used to look like a working button
+                that silently did nothing on tap (invalid tel: URI, no
+                error). Disable it instead so it's honest about not being
+                callable. */}
+            {ride.passenger.phone && ride.passenger.phone !== "Not available" ? (
+              <a
+                href={`tel:${ride.passenger.phone}`}
+                className="flex-1 py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-phone" />
+                Call passenger
+              </a>
+            ) : (
+              <button
+                disabled
+                className="flex-1 py-3 rounded-full bg-white/5 border border-white/10 text-slate-500 font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
+              >
+                <i className="fa-solid fa-phone" />
+                No phone on file
+              </button>
+            )}
             <button
               onClick={onOpenChat}
               className="relative flex-1 py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold flex items-center justify-center gap-2"
@@ -334,6 +352,7 @@ export default function DriverActiveRideScreen({
         otherPartyName={ride.passenger.name}
         onSend={onSendMessage}
         sending={sendingMessage}
+        sendError={chatError}
       />
     </div>
   );

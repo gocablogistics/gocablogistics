@@ -20,6 +20,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useAutoDismiss } from "../hooks/useAutoDismiss";
 import { getCurrentPosition } from "../lib/geolocation";
 import { openExternal } from "../lib/openExternal";
+import { withViewTransition } from "../lib/viewTransition";
 import { isTauri } from "@tauri-apps/api/core";
 import Loader from "../components/Loader";
 import BookingScreen from "../components/BookingScreen";
@@ -67,11 +68,13 @@ export default function RiderHome() {
   const [chatOpen, setChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const chatOpenRef = useRef(chatOpen);
   chatOpenRef.current = chatOpen;
 
   useAutoDismiss(cancelError, () => setCancelError(null));
   useAutoDismiss(payError, () => setPayError(null));
+  useAutoDismiss(chatError, () => setChatError(null));
   useAutoDismiss(disputeError, () => setDisputeError(null));
   useAutoDismiss(reportDriverError, () => setReportDriverError(null));
 
@@ -258,7 +261,7 @@ export default function RiderHome() {
         })
         .catch((err) => {
           if (!cancelled && err instanceof ApiError && err.status === 404) {
-            setRide(null);
+            withViewTransition(() => setRide(null));
           }
         });
     }, STATUS_POLL_MS);
@@ -353,10 +356,12 @@ export default function RiderHome() {
     setCancelError(null);
     try {
       await cancelRide(ride.ride_id, accessToken);
-      setRide(null);
-      setLiveMessage(null);
-      setCashCode(null);
-      setDriverPosition(null);
+      withViewTransition(() => {
+        setRide(null);
+        setLiveMessage(null);
+        setCashCode(null);
+        setDriverPosition(null);
+      });
     } catch (err) {
       setCancelError(err instanceof ApiError ? err.message : "Could not cancel.");
     } finally {
@@ -411,16 +416,21 @@ export default function RiderHome() {
     }
   }
 
-  async function handleSendMessage(text: string) {
-    if (!ride || !accessToken) return;
+  async function handleSendMessage(text: string): Promise<boolean> {
+    if (!ride || !accessToken) return false;
     setSendingMessage(true);
+    setChatError(null);
     try {
       const msg = await sendRideMessage(ride.ride_id, text, accessToken);
       appendMessage(msg);
-    } catch {
-      // Best-effort — the input keeps whatever the user typed on failure
-      // is already cleared by ChatPanel, so just drop it silently; a retry
-      // is as simple as typing it again.
+      return true;
+    } catch (err) {
+      // Previously a silent no-op — the input cleared either way, so a
+      // failed send (expired token, dropped connection) looked identical
+      // to a successful one and the driver just never got it. Now the
+      // caller (ChatPanel) keeps the typed text and this surfaces why.
+      setChatError(err instanceof ApiError ? err.message : "Message failed to send. Check your connection and try again.");
+      return false;
     } finally {
       setSendingMessage(false);
     }
@@ -444,7 +454,7 @@ export default function RiderHome() {
           setLoadingRide(true);
           setCashCode(null);
           getActiveRide(accessToken!)
-            .then(applyRide)
+            .then((r) => withViewTransition(() => applyRide(r)))
             .finally(() => setLoadingRide(false));
         }}
         onLogout={logout}
@@ -505,17 +515,20 @@ export default function RiderHome() {
       onCloseChat={() => setChatOpen(false)}
       sendingMessage={sendingMessage}
       onSendMessage={handleSendMessage}
+      chatError={chatError}
       onBookAnother={() => {
-        setRide(null);
-        setCashCode(null);
-        setLiveMessage(null);
-        setDriverPosition(null);
-        setReportDriverReason("");
-        setReportDriverError(null);
-        setReportDriverSubmitted(false);
-        setMessages([]);
-        setUnreadCount(0);
-        setChatOpen(false);
+        withViewTransition(() => {
+          setRide(null);
+          setCashCode(null);
+          setLiveMessage(null);
+          setDriverPosition(null);
+          setReportDriverReason("");
+          setReportDriverError(null);
+          setReportDriverSubmitted(false);
+          setMessages([]);
+          setUnreadCount(0);
+          setChatOpen(false);
+        });
       }}
       onLogout={logout}
     />

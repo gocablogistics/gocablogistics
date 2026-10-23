@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { RideMessageOut } from "../api/rides";
+import { useBackHandler } from "../hooks/useBackHandler";
+import { useMountTransition } from "../hooks/useMountTransition";
+
+const TRANSITION_MS = 250;
 
 interface ChatPanelProps {
   open: boolean;
@@ -7,8 +11,15 @@ interface ChatPanelProps {
   messages: RideMessageOut[];
   myUserId: number;
   otherPartyName?: string;
-  onSend: (text: string) => void;
+  /** Resolves to whether the message actually sent — the input only clears
+   * on true, so a failed send (expired token, dropped connection, etc.)
+   * leaves what was typed in place instead of silently discarding it. */
+  onSend: (text: string) => Promise<boolean>;
   sending: boolean;
+  /** Set by the caller when the last send attempt failed, so it's visible
+   * right where the user is looking instead of vanishing with no trace —
+   * previously a failed send cleared the input and said nothing at all. */
+  sendError?: string | null;
 }
 
 export default function ChatPanel({
@@ -19,6 +30,7 @@ export default function ChatPanel({
   otherPartyName,
   onSend,
   sending,
+  sendError,
 }: ChatPanelProps) {
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -27,17 +39,25 @@ export default function ChatPanel({
     if (open) bottomRef.current?.scrollIntoView({ block: "end" });
   }, [open, messages.length]);
 
-  if (!open) return null;
+  useBackHandler(open, onClose);
 
-  function handleSend() {
+  const { shouldRender, isOpen } = useMountTransition(open, TRANSITION_MS);
+  if (!shouldRender) return null;
+
+  async function handleSend() {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
-    onSend(trimmed);
-    setText("");
+    const ok = await onSend(trimmed);
+    if (ok) setText("");
   }
 
   return (
-    <div className="fixed inset-0 z-30 flex flex-col bg-[#20241f]">
+    <div
+      className={`fixed inset-0 z-30 flex flex-col bg-[#20241f] transition-transform ease-out ${
+        isOpen ? "translate-x-0" : "translate-x-full"
+      }`}
+      style={{ transitionDuration: `${TRANSITION_MS}ms` }}
+    >
       <div className="flex items-center gap-3 px-4 pt-6 pb-4 border-b border-white/10">
         <button
           onClick={onClose}
@@ -84,6 +104,9 @@ export default function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
+      {sendError && (
+        <p className="px-4 pb-2 text-red-400 text-xs text-center">{sendError}</p>
+      )}
       <div className="flex items-center gap-2 px-4 py-4 border-t border-white/10">
         <input
           value={text}

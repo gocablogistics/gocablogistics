@@ -3,6 +3,7 @@ import { useAuth } from "../auth/AuthContext";
 import { ApiError, API_BASE_URL } from "../api/http";
 import { useAutoDismiss } from "../hooks/useAutoDismiss";
 import { getCurrentPosition } from "../lib/geolocation";
+import { withViewTransition } from "../lib/viewTransition";
 import {
   startLocationTracking,
   stopLocationTracking,
@@ -64,11 +65,13 @@ export default function DriverHome() {
   const [chatOpen, setChatOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const chatOpenRef = useRef(chatOpen);
   chatOpenRef.current = chatOpen;
 
   useAutoDismiss(toggleError, () => setToggleError(null));
   useAutoDismiss(actionError, () => setActionError(null));
+  useAutoDismiss(chatError, () => setChatError(null));
   useAutoDismiss(cashError, () => setCashError(null));
   useAutoDismiss(reportError, () => setReportError(null));
 
@@ -88,10 +91,10 @@ export default function DriverHome() {
     setPayouts(payoutList);
     try {
       const ride = await getDriverActiveRide(accessToken);
-      setActiveRide(ride);
+      withViewTransition(() => setActiveRide(ride));
     } catch (err) {
       if (!(err instanceof ApiError && err.status === 404)) throw err;
-      setActiveRide(null);
+      withViewTransition(() => setActiveRide(null));
     }
   }
 
@@ -154,7 +157,7 @@ export default function DriverHome() {
         })
         .catch((err) => {
           if (!cancelled && err instanceof ApiError && err.status === 404) {
-            setActiveRide(null);
+            withViewTransition(() => setActiveRide(null));
           }
         });
     };
@@ -185,7 +188,7 @@ export default function DriverHome() {
           // criteria for this driver. Clear it the same way every other
           // poll in this file already does.
           if (!cancelled && err instanceof ApiError && err.status === 404) {
-            setActiveRide(null);
+            withViewTransition(() => setActiveRide(null));
           }
         });
     };
@@ -397,15 +400,21 @@ export default function DriverHome() {
     }
   }
 
-  async function handleSendMessage(text: string) {
-    if (!accessToken || !activeRide) return;
+  async function handleSendMessage(text: string): Promise<boolean> {
+    if (!accessToken || !activeRide) return false;
     setSendingMessage(true);
+    setChatError(null);
     try {
       const msg = await sendRideMessage(activeRide.ride_id, text, accessToken);
       appendMessage(msg);
-    } catch {
-      // Best-effort — see RiderHome's identical handler for why this is a
-      // silent no-op rather than surfacing an error for a single message.
+      return true;
+    } catch (err) {
+      // Previously a silent no-op — the input cleared either way, so a
+      // failed send (expired token, dropped connection) looked identical
+      // to a successful one and the passenger just never got it. Now the
+      // caller (ChatPanel) keeps the typed text and this surfaces why.
+      setChatError(err instanceof ApiError ? err.message : "Message failed to send. Check your connection and try again.");
+      return false;
     } finally {
       setSendingMessage(false);
     }
@@ -478,6 +487,7 @@ export default function DriverHome() {
         onCloseChat={() => setChatOpen(false)}
         sendingMessage={sendingMessage}
         onSendMessage={handleSendMessage}
+        chatError={chatError}
         onDone={() => {
           setMessages([]);
           setUnreadCount(0);
