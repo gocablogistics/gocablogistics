@@ -42,5 +42,17 @@
   <string>GoCab needs camera access so drivers can take a selfie and document photos during registration.</string>
   <key>NSPhotoLibraryUsageDescription</key>
   <string>GoCab needs photo library access so drivers can upload existing photos of their documents during registration.</string>
+  <!-- Same missing-usage-string crash as camera, for location this time:
+       @tauri-apps/plugin-geolocation's getCurrentPosition (used for pickup
+       location, booking, and the driver's foreground location-ping loop —
+       see DriverHome.tsx/RiderHome.tsx/Signup.tsx/BookingScreen.tsx) would
+       hit this the moment a rider sets pickup or a driver goes online,
+       instantly killing the app with no dialog, same as the camera bug.
+       "WhenInUse" only — background tracking isn't implemented on iOS yet
+       (GocabNativePlugin.swift's startLocationTracking still rejects), so
+       declaring "Always" now would be an unused permission with nothing
+       behind it. -->
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>GoCab needs your location to find nearby drivers, set pickup points, and track trips in progress.</string>
 </dict>
 </plist>

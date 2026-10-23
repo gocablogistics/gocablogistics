@@ -53,7 +53,7 @@ export default function ChatPanel({
 
   return (
     <div
-      className={`fixed inset-0 z-30 flex flex-col bg-[#20241f] transition-transform ease-out ${
+      className={`safe-area-shell fixed inset-0 z-30 flex flex-col bg-[#20241f] transition-transform ease-out ${
         isOpen ? "translate-x-0" : "translate-x-full"
       }`}
       style={{ transitionDuration: `${TRANSITION_MS}ms` }}

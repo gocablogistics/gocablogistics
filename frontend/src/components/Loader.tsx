@@ -29,7 +29,7 @@ export default function Loader({
       aria-live="polite"
       className={
         `${immediate ? "gc-loader-now " : ""}${fullScreen
-          ? "gc-loader-screen fixed inset-0 z-50 flex flex-col items-center justify-center gap-7 bg-[#20241f] px-8"
+          ? "gc-loader-screen safe-area-shell fixed inset-0 z-50 flex flex-col items-center justify-center gap-7 bg-[#20241f] px-8"
           : "gc-loader-screen flex flex-col items-center justify-center gap-5 py-10"}`
       }
     >

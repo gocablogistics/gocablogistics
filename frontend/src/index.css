@@ -65,8 +65,75 @@ button:not(:disabled):active {
   transform: scale(0.97);
 }
 
+/* Fakes Android's native ripple for the handful of primary action buttons
+   (book ride, accept ride, pay, cancel) — real ?attr/selectableItemBackground
+   ripple can't apply to HTML content regardless of approach, so this is the
+   normal way to get the effect in any hybrid app, not a compromise unique to
+   this one. --ripple-x/--ripple-y are set from the tap point by
+   lib/haptics.ts's onPrimaryPress, paired with button:active above. */
+.ripple-surface {
+  position: relative;
+  overflow: hidden;
+}
+.ripple-surface::after {
+  content: "";
+  position: absolute;
+  top: var(--ripple-y, 50%);
+  left: var(--ripple-x, 50%);
+  width: 10px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+/* Driven by a JS-toggled class (lib/haptics.ts's onPrimaryPress), not
+   :active — a real tap often releases faster than :active's press-and-hold
+   window even registers, which made the original :active-only version
+   nearly invisible on a quick tap. This always plays to completion on its
+   own fixed timeline regardless of how long the finger is actually down. */
+.ripple-surface.rippling::after {
+  animation: ripple-expand 0.5s ease-out;
+}
+@keyframes ripple-expand {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(16); opacity: 0; }
+}
+
+/* Shared name across the booking<->active-ride (and driver equivalent)
+   mutually-exclusive full-screen pairs — see lib/viewTransition.ts. Each
+   pair is never both-mounted at once, so sharing one name is exactly what
+   makes the browser crossfade old->new automatically. */
+/* Shared by every `fixed inset-0` surface (full screens and modals alike —
+   see .screen-shell below for the subset that's also a View Transitions
+   pair) — all of them sit against the raw viewport, so #root's safe-area
+   padding above never reaches any of them. */
+.safe-area-shell {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.screen-shell {
+  view-transition-name: screen;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 #root {
   min-height: 100svh;
+  /* Android already handles this natively (MainActivity.kt's edge-to-edge
+     inset listener) — iOS has no such native layer, so without this, a
+     normal-flow page (Home, Login, Signup, ...) sits under the notch/
+     Dynamic Island/home indicator. On #root rather than body: the global
+     `* { box-sizing: border-box }` means this padding is absorbed within
+     #root's own 100svh min-height instead of adding extra height beyond
+     the viewport (which padding body here would have done, since #root's
+     100svh is measured against the viewport regardless of body's box). A
+     no-op on Android/desktop: env() resolves to 0 with no notch/home
+     indicator to avoid. */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @keyframes float {
@@ -201,6 +268,7 @@ button:not(:disabled):active {
   .gc-loader-ring { animation: none; opacity: 0.2; transform: scale(1.25); }
   .gc-dots i { opacity: 0.7; }
   .gc-bar > span { width: 100%; opacity: 0.5; }
+  .ripple-surface.rippling::after { animation: none; }
 }
 
 .gc-loader-now { animation: none; }
