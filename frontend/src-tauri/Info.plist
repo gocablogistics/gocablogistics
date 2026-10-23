@@ -47,12 +47,24 @@
        location, booking, and the driver's foreground location-ping loop —
        see DriverHome.tsx/RiderHome.tsx/Signup.tsx/BookingScreen.tsx) would
        hit this the moment a rider sets pickup or a driver goes online,
-       instantly killing the app with no dialog, same as the camera bug.
-       "WhenInUse" only — background tracking isn't implemented on iOS yet
-       (GocabNativePlugin.swift's startLocationTracking still rejects), so
-       declaring "Always" now would be an unused permission with nothing
-       behind it. -->
+       instantly killing the app with no dialog, same as the camera bug. -->
   <key>NSLocationWhenInUseUsageDescription</key>
   <string>GoCab needs your location to find nearby drivers, set pickup points, and track trips in progress.</string>
+  <!-- GocabNativePlugin.swift's startLocationTracking now requests Always
+       authorization and keeps posting the driver's location in the
+       background (CLLocationManager + allowsBackgroundLocationUpdates +
+       the "location" UIBackgroundModes entry below) — iOS's equivalent of
+       Android's GocabLocationService foreground service. Both strings are
+       required together for the WhenInUse -> Always upgrade flow. -->
+  <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+  <string>GoCab needs your location in the background so riders can see your live position while you're online and between trips.</string>
+  <!-- Required for CLLocationManager updates to keep delivering once iOS
+       backgrounds the app — without this entry, allowsBackgroundLocationUpdates
+       is silently ignored and updates still stop the moment the app
+       backgrounds, Always authorization notwithstanding. -->
+  <key>UIBackgroundModes</key>
+  <array>
+    <string>location</string>
+  </array>
 </dict>
 </plist>
