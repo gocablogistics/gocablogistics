@@ -55,4 +55,8 @@ impl<R: Runtime> GocabNative<R> {
       .run_mobile_plugin("updateLocationToken", payload)
       .map_err(Into::into)
   }
+
+  pub fn exit_app(&self) -> crate::Result<()> {
+    self.0.run_mobile_plugin("exitApp", ()).map_err(Into::into)
+  }
 }

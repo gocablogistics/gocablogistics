@@ -8,7 +8,6 @@ import Signup from "./pages/Signup";
 import RiderHome from "./pages/RiderHome";
 import DriverHome from "./pages/DriverHome";
 import PaymentCallback from "./pages/PaymentCallback";
-import Track from "./pages/Track";
 import RideHistory from "./pages/RideHistory";
 import Referrals from "./pages/Referrals";
 import Profile from "./pages/Profile";
@@ -17,6 +16,8 @@ import Balance from "./pages/Balance";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import Loader from "./components/Loader";
+import BackExitHint from "./components/BackExitHint";
+import { useAndroidBackHandler } from "./hooks/useAndroidBackHandler";
 
 // First-open launch screen: the very first time the app is opened — before
 // anyone has signed up — it starts on the branded loader for a moment instead of
@@ -62,10 +63,18 @@ function LaunchScreen({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+// Needs to be inside <BrowserRouter> for useLocation/useNavigate, so it
+// can't live directly in App()'s own body.
+function AndroidBackBridge() {
+  const { showExitHint } = useAndroidBackHandler();
+  return <BackExitHint show={showExitHint} />;
+}
+
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <AndroidBackBridge />
         <LaunchScreen>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -98,7 +107,6 @@ function App() {
             path="/payment-callback"
             element={<PaymentCallback />}
           />
-          <Route path="/track/:token" element={<Track />} />
           <Route
             path="/rider/history"
             element={

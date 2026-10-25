@@ -1,23 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { isTauri } from "@tauri-apps/api/core";
 import { useAuth } from "../auth/AuthContext";
 import { getReferrals, type ReferralSummaryOut } from "../api/rides";
 
-// window.location.origin is meaningless inside the Android app (it's the
-// WebView's own internal origin, not a real address a friend could open) —
-// only worth appending to the share text on the web build.
-function shareLink(code: string): string | null {
-  if (isTauri()) return null;
-  return `${window.location.origin}/signup?ref=${code}`;
-}
-
+// No public web address exists for GoCab yet — window.location.origin
+// inside the Android app is just the WebView's own internal origin
+// (http://localhost:3000), not a real address a friend could open, and
+// there's no separate hosted web frontend either. Code-only share text
+// until a real public signup page exists to link to.
 function buildShareText(summary: ReferralSummaryOut): string {
-  const link = shareLink(summary.referral_code);
   const amount = `₦${summary.referral_reward_amount.toLocaleString()}`;
-  return link
-    ? `Use my GoCab referral code ${summary.referral_code} when you sign up, or just tap this link: ${link}. I'll get ${amount} in ride credit once you complete your first paid ride.`
-    : `Use my GoCab referral code ${summary.referral_code} when you sign up. I'll get ${amount} in ride credit once you complete your first paid ride.`;
+  return `Use my GoCab referral code ${summary.referral_code} when you sign up. I'll get ${amount} in ride credit once you complete your first paid ride.`;
 }
 
 export default function Referrals() {

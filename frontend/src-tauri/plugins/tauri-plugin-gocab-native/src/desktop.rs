@@ -35,4 +35,8 @@ impl<R: Runtime> GocabNative<R> {
   pub fn update_location_token(&self, _payload: UpdateLocationTokenRequest) -> crate::Result<()> {
     Ok(())
   }
+
+  pub fn exit_app(&self) -> crate::Result<()> {
+    Ok(())
+  }
 }

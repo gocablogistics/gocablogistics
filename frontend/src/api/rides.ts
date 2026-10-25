@@ -85,10 +85,9 @@ export interface ActiveRideOut {
   // Only present while the driver is heading to the pickup point.
   pickup_eta_min?: number | null;
   driver_distance_km?: number | null;
-  // A no-login link to forward to whoever's actually receiving the
-  // package — only set while the ride is still in flight (pending/
-  // accepted/started). See pages/Track.tsx.
-  tracking_url?: string | null;
+  // Only set once payment_status === "paid" — see components/ReceiptModal.tsx.
+  paid_at?: string | null;
+  payment_reference?: string | null;
 }
 
 export function getActiveRide(accessToken: string) {
@@ -416,6 +415,31 @@ export function cashOutNow(accessToken: string) {
   return apiRequest<CashoutOut>("/rides/driver/cashout", { method: "POST", accessToken });
 }
 
+export interface ResolveBankAccountOut {
+  account_name: string;
+}
+
+export function resolveBankAccount(bankCode: string, accountNumber: string, accessToken: string) {
+  return apiRequest<ResolveBankAccountOut>("/rides/driver/resolve-bank-account", {
+    method: "POST",
+    body: { bank_code: bankCode, account_number: accountNumber },
+    accessToken,
+  });
+}
+
+export function updateBankDetails(
+  bankCode: string,
+  accountNumber: string,
+  code: string,
+  accessToken: string,
+) {
+  return apiRequest<{ detail: string }>("/rides/driver/update-bank-details", {
+    method: "POST",
+    body: { bank_code: bankCode, account_number: accountNumber, code },
+    accessToken,
+  });
+}
+
 export interface ReferralOut {
   full_name: string;
   joined_at: string;
@@ -446,6 +470,8 @@ export interface RideHistoryOut {
   completed_at: string | null;
   other_party_name: string | null;
   my_rating_submitted: boolean;
+  paid_at?: string | null;
+  payment_reference?: string | null;
 }
 
 export function getRideHistory(accessToken: string) {
@@ -456,21 +482,3 @@ export function getDriverRideHistory(accessToken: string) {
   return apiRequest<RideHistoryOut[]>("/rides/driver/history", { accessToken });
 }
 
-export interface TrackingOut {
-  status: string;
-  destination: string;
-  vehicle_type: string;
-  driver_name: string | null;
-  driver_photo: string | null;
-  driver_latitude: number | null;
-  driver_longitude: number | null;
-  destination_latitude: number | null;
-  destination_longitude: number | null;
-  pickup_eta_min: number | null;
-}
-
-// Public, unauthenticated — no accessToken, same as estimateFare. Used by
-// pages/Track.tsx, which a recipient opens with no GoCab account at all.
-export function getTracking(token: string) {
-  return apiRequest<TrackingOut>(`/rides/track/${token}`);
-}

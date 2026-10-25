@@ -36,3 +36,8 @@ pub(crate) async fn update_location_token<R: Runtime>(
 ) -> Result<()> {
     app.gocab_native().update_location_token(payload)
 }
+
+#[command]
+pub(crate) async fn exit_app<R: Runtime>(app: AppHandle<R>) -> Result<()> {
+    app.gocab_native().exit_app()
+}

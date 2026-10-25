@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 
-const SUPPORT_EMAIL = "support@gocab.app";
+const SUPPORT_EMAIL = "support@gocablogistics.com";
 const LAST_UPDATED = "22 September 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

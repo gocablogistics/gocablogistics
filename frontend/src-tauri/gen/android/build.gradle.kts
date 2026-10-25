@@ -12,6 +12,9 @@ buildscript {
         // matching `id("com.google.gms.google-services")` in app/build.gradle.kts)
         // is a one-time manual patch, not expected to be re-applied.
         classpath("com.google.gms:google-services:4.4.2")
+        // Crashlytics — same one-time manual patch as google-services above,
+        // reads the same app/google-services.json, no new config needed.
+        classpath("com.google.firebase:firebase-crashlytics-gradle:3.0.2")
     }
 }
 

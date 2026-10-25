@@ -3,6 +3,7 @@ import RideMap from "./RideMap";
 import NotificationBell from "./NotificationBell";
 import NavDrawer from "./NavDrawer";
 import { useElementHeight } from "../hooks/useElementHeight";
+import { onPrimaryPress } from "../lib/haptics";
 import type { AvailabilityOut, DriverSummaryOut, NearbyRideOut, PayoutOut } from "../api/rides";
 
 interface DriverBrowseScreenProps {
@@ -49,7 +50,7 @@ export default function DriverBrowseScreen({
     : [];
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#20241f]">
+    <div className="screen-shell fixed inset-0 flex flex-col bg-[#20241f]">
       <RideMap
         fullScreen
         dark
@@ -162,8 +163,9 @@ export default function DriverBrowseScreen({
                 </p>
                 <button
                   onClick={() => onAccept(ride.id)}
+                  onPointerDown={onPrimaryPress}
                   disabled={actingOn === ride.id}
-                  className="w-full py-3 rounded-full bg-[#1be451] text-neutral-900 font-bold disabled:opacity-50"
+                  className="ripple-surface w-full py-3 rounded-full bg-[#1be451] text-neutral-900 font-bold disabled:opacity-50"
                 >
                   {actingOn === ride.id ? "Accepting…" : "Accept"}
                 </button>

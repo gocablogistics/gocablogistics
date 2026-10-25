@@ -41,6 +41,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
       commands::start_location_tracking,
       commands::stop_location_tracking,
       commands::update_location_token,
+      commands::exit_app,
     ])
     .setup(|app, api| {
       #[cfg(mobile)]

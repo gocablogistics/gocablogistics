@@ -3,6 +3,7 @@ import { estimateFare, requestRide, type FareEstimateOut, type VehicleType } fro
 import { ApiError } from "../api/http";
 import { loadGoogleMaps } from "../api/googleMaps";
 import { getFeatureFlags } from "../api/flags";
+import { onPrimaryPress } from "../lib/haptics";
 import { useAutoDismiss } from "../hooks/useAutoDismiss";
 import { getCurrentPosition } from "../lib/geolocation";
 import NotificationBell from "./NotificationBell";
@@ -260,7 +261,7 @@ export default function BookingScreen({
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#20241f]">
+    <div className="screen-shell fixed inset-0 flex flex-col bg-[#20241f]">
       <RideMap
         fullScreen
         dark
@@ -492,8 +493,9 @@ export default function BookingScreen({
                 <button
                   type="button"
                   onClick={handleSendIt}
+                  onPointerDown={onPrimaryPress}
                   disabled={loading}
-                  className="w-full py-4 rounded-full bg-[#1be451] text-neutral-900 font-bold text-lg disabled:opacity-50"
+                  className="ripple-surface w-full py-4 rounded-full bg-[#1be451] text-neutral-900 font-bold text-lg disabled:opacity-50"
                 >
                   {loading ? "Booking…" : "Yes, book ride"}
                 </button>

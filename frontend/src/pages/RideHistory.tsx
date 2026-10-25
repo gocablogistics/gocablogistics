@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import Loader from "../components/Loader";
 import { getDriverRideHistory, getRideHistory, type RideHistoryOut } from "../api/rides";
 import RateRide from "../components/RateRide";
+import ReceiptModal from "../components/ReceiptModal";
 
 const STATUS_LABEL: Record<string, string> = {
   completed: "Completed",
@@ -21,6 +22,7 @@ export default function RideHistory() {
   const [rides, setRides] = useState<RideHistoryOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ratingRideId, setRatingRideId] = useState<number | null>(null);
+  const [receiptRideId, setReceiptRideId] = useState<number | null>(null);
   const isDriver = user?.role === "driver";
 
   useEffect(() => {
@@ -72,6 +74,17 @@ export default function RideHistory() {
               {r.total_fare != null && <span className="text-white font-semibold">₦{r.total_fare.toLocaleString()}</span>}
             </div>
 
+            {!isDriver && r.status === "completed" && r.payment_status === "paid" && (
+              <button
+                type="button"
+                onClick={() => setReceiptRideId(r.ride_id)}
+                className="self-start text-slate-300 text-xs font-semibold mt-1"
+              >
+                <i className="fa-solid fa-receipt mr-1" />
+                View receipt
+              </button>
+            )}
+
             {r.status === "completed" && r.payment_status === "paid" && (
               r.my_rating_submitted ? (
                 <p className="text-[#1be451] text-xs font-semibold mt-1">
@@ -109,6 +122,24 @@ export default function RideHistory() {
           </div>
         ))}
       </div>
+
+      {receiptRideId != null && (() => {
+        const r = rides?.find((row) => row.ride_id === receiptRideId);
+        if (!r) return null;
+        return (
+          <ReceiptModal
+            rideId={r.ride_id}
+            pickup={r.current_location}
+            destination={r.destination}
+            otherPartyName={r.other_party_name}
+            amount={r.total_fare}
+            paymentMethod={r.payment_method}
+            paidAt={r.paid_at ?? null}
+            reference={r.payment_reference ?? null}
+            onClose={() => setReceiptRideId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

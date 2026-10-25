@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 
-// TODO: keep in sync with Support.tsx's SUPPORT_EMAIL placeholder — swap
-// both to the real inbox before launch.
-const SUPPORT_EMAIL = "support@gocab.app";
+// Keep in sync with Support.tsx and TermsAndConditions.tsx's own copies
+// of this constant.
+const SUPPORT_EMAIL = "support@gocablogistics.com";
 const LAST_UPDATED = "22 September 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

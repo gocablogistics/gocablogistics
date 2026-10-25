@@ -59,12 +59,14 @@ const FILE_LABELS: Record<keyof DriverRegisterFiles, string> = {
   vehicle_picture: "Vehicle picture",
 };
 
-// Same reasoning as Login.tsx's STORAGE_KEY: a phone browser tab switched
-// away to WhatsApp, the camera, or the photo picker (all of which this
-// wizard's file-upload steps trigger constantly) is often reclaimed and
-// reloaded fresh by the OS, wiping every field filled in so far and
-// dropping someone back to square one. This is especially costly here —
-// a 12-step driver signup is a lot more to lose than Login's 2 steps.
+// Switching away to WhatsApp, the camera, or the photo picker (all of
+// which this wizard's file-upload steps trigger constantly) can get the
+// whole app process reclaimed by Android, not just the page reloaded —
+// unlike a desktop browser tab, sessionStorage isn't reliably safe
+// against that (it's scoped to the browsing session, which a full process
+// kill can end), so this uses localStorage instead, same as the intent
+// behind Login.tsx's STORAGE_KEY. This is especially costly here — a
+// 12-step driver signup is a lot more to lose than Login's 2 steps.
 //
 // File objects genuinely cannot survive this (they're not
 // JSON-serializable), so `files` itself is never persisted — see the
@@ -117,7 +119,7 @@ function registrationErrorMessage(err: unknown): string {
 
 function loadSavedSignupState(): Partial<SavedSignupState> {
   try {
-    const raw = sessionStorage.getItem(SIGNUP_STORAGE_KEY);
+    const raw = localStorage.getItem(SIGNUP_STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -126,7 +128,7 @@ function loadSavedSignupState(): Partial<SavedSignupState> {
 
 function clearSavedSignupState() {
   try {
-    sessionStorage.removeItem(SIGNUP_STORAGE_KEY);
+    localStorage.removeItem(SIGNUP_STORAGE_KEY);
   } catch {
     /* best-effort */
   }
@@ -161,7 +163,7 @@ export default function Signup() {
   // as every other field in this form.
   const prefilledReferralCode = new URLSearchParams(location.search).get("ref") ?? "";
 
-  // Lazy initializer — loadSavedSignupState() (a sessionStorage read +
+  // Lazy initializer — loadSavedSignupState() (a localStorage read +
   // JSON.parse) only actually runs once, on the initial render, not on
   // every re-render this component does as fields are typed into.
   const [savedSignup] = useState(loadSavedSignupState);
@@ -234,7 +236,7 @@ export default function Signup() {
         vehicleColor, productionYear, licensePlate, bankName, bankCode,
         accountNumber, accountHolderName, latitude, longitude, agreedToTerms,
       };
-      sessionStorage.setItem(SIGNUP_STORAGE_KEY, JSON.stringify(toSave));
+      localStorage.setItem(SIGNUP_STORAGE_KEY, JSON.stringify(toSave));
     } catch {
       /* private browsing / storage blocked — worst case, back to normal behavior */
     }
@@ -552,7 +554,7 @@ export default function Signup() {
           onClick={() => selectRole("driver")}
           className="w-full max-w-[320px] py-4 rounded-full bg-white/10 border border-white/20 text-white font-bold text-lg"
         >
-          I am a rider
+          I am a driver
         </button>
        
       </div>
@@ -568,6 +570,7 @@ export default function Signup() {
             setError(null);
             if (riderStep === "name") {
               setRole(null);
+              setRiderStep("role");
             } else if (riderStep === "phone") {
               setRiderStep("name");
             } else if (riderStep === "location") {
@@ -704,8 +707,8 @@ export default function Signup() {
                 className="mt-0.5 shrink-0"
               />
               <span>
-                I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline text-[#1be451]">Terms &amp; Conditions</a> and{" "}
-                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline text-[#1be451]">Privacy Policy</a>
+                I agree to the <Link to="/terms" className="underline text-[#1be451]">Terms &amp; Conditions</Link> and{" "}
+                <Link to="/privacy" className="underline text-[#1be451]">Privacy Policy</Link>
               </span>
             </label>
 
@@ -751,6 +754,7 @@ export default function Signup() {
     const prev = prevStep[driverStep];
     if (prev === null || prev === undefined) {
       setRole(null);
+      setDriverStep("vehicle");
     } else {
       setDriverStep(prev);
     }
@@ -1055,8 +1059,8 @@ export default function Signup() {
               className="mt-0.5 shrink-0"
             />
             <span>
-              I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline text-[#1be451]">Terms &amp; Conditions</a> and{" "}
-              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline text-[#1be451]">Privacy Policy</a>
+              I agree to the <Link to="/terms" className="underline text-[#1be451]">Terms &amp; Conditions</Link> and{" "}
+              <Link to="/privacy" className="underline text-[#1be451]">Privacy Policy</Link>
             </span>
           </label>
 

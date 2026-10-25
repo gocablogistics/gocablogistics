@@ -105,6 +105,16 @@ class GocabNativePlugin(private val activity: Activity) : Plugin(activity) {
         invoke.resolve()
     }
 
+    // moveTaskToBack, not finish() — backgrounds the task like the Home
+    // button so the process/WebView state survives for an instant
+    // relaunch, matching how real ride-hailing apps handle a confirmed
+    // "double back to exit" instead of destroying the Activity.
+    @Command
+    fun exitApp(invoke: Invoke) {
+        activity.moveTaskToBack(true)
+        invoke.resolve()
+    }
+
     @Command
     fun updateLocationToken(invoke: Invoke) {
         val args = invoke.parseArgs(UpdateLocationTokenArgs::class.java)
@@ -138,6 +148,13 @@ class GocabNativePlugin(private val activity: Activity) : Plugin(activity) {
             data.put("title", title)
             data.put("body", body)
             activeInstance?.get()?.trigger("push-received", data)
+        }
+
+        /** Forwards a hardware back press to JS as `plugin:gocab-native://back-pressed` —
+         * called directly from MainActivity.onCreate's OnBackPressedCallback, same
+         * reach-the-live-instance pattern as the two helpers above. */
+        fun notifyBackPressed() {
+            activeInstance?.get()?.trigger("back-pressed", JSObject())
         }
     }
 }

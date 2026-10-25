@@ -5,6 +5,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("rust")
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 val tauriProperties = Properties().apply {
@@ -97,6 +98,12 @@ dependencies {
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.lifecycle:lifecycle-process:2.10.0")
+    // Crashlytics — reports native (Kotlin/Rust-via-JNI) crashes to the
+    // Firebase console. firebase-analytics is a required transitive
+    // dependency of Crashlytics itself, not optional telemetry we added.
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.4")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")
