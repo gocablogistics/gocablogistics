@@ -10,7 +10,14 @@ import PackageDescription
 let package = Package(
     name: "tauri-plugin-gocab-native",
     platforms: [
-        .macOS(.v10_13),
+        // Bumped from .v10_13 — Firebase 12.x's own Package.swift declares
+        // macOS 10.15 as ITS minimum too, not just iOS 15 (missed this the
+        // first time around: bumped iOS to match Firebase and left macOS
+        // alone, which is exactly the mismatch Xcode's own error named:
+        // "requires macos 10.13, but depends on... FirebaseMessaging which
+        // requires macos 10.15"). Doesn't affect the app's real deployment
+        // target either way — GoCab doesn't ship a macOS build.
+        .macOS(.v10_15),
         // Bumped from .v13 — Firebase 12.x's own minimum is iOS 15, which
         // already matches this app's real deployment target
         // (tauri.conf.json's bundle.iOS.minimumSystemVersion), so this is
