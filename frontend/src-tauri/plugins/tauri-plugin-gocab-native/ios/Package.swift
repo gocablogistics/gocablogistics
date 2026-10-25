@@ -54,6 +54,23 @@ let package = Package(
             // gen/apple app target directly (see that function's comment).
             // .copy, not .process: a plist with real config values should
             // land in the bundle byte-for-byte, not get re-processed.
-            resources: [.copy("GoogleService-Info.plist")])
+            resources: [.copy("GoogleService-Info.plist")],
+            // tools-version 6.1 is needed to even parse Firebase's own
+            // manifest, but that also silently switched this target's
+            // *language mode* to Swift 6, enabling strict concurrency
+            // checking as hard errors — confirmed as the actual build
+            // failure via the real compiler diagnostic ("sending 'self'
+            // risks causing data races"), not assumed. Two attempted
+            // fixes using Task { @MainActor [weak self] in } still didn't
+            // fully resolve it (verifiable only via CI, with no local
+            // Swift 6 toolchain to check against), so rather than keep
+            // guessing at concurrency annotations blind, this pins the
+            // target's *language mode* back to Swift 5 — tools-version and
+            // language mode are independent settings — where none of this
+            // is an error, just an optional warning. Confirmed as a real,
+            // documented SwiftPM feature (swiftLanguageMode is a genuine
+            // SwiftSetting case, verified directly against
+            // swift-package-manager's own PackageDescription source).
+            swiftSettings: [.swiftLanguageMode(.v5)])
     ]
 )
