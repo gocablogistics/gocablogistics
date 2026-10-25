@@ -100,8 +100,15 @@ class GocabNativePlugin: Plugin, CLLocationManagerDelegate, MessagingDelegate, U
       return
     }
     pendingFcmTokenInvokes.append(invoke)
-    DispatchQueue.main.async {
-      self.setupApnsDelegateIfNeeded()
+    // Swift 6's strict concurrency (enabled by this package's
+    // swift-tools-version:6.1, bumped for Firebase) rejects a plain
+    // `DispatchQueue.main.async { self... }` here — GocabNativePlugin is an
+    // ordinary NSObject subclass, not provably Sendable, so sending a
+    // strong `self` across that boundary is a compile error now, not just
+    // a warning. Task { @MainActor in } is the standard fix: an explicit,
+    // weakly-captured hop the compiler can actually verify is safe.
+    Task { @MainActor [weak self] in
+      self?.setupApnsDelegateIfNeeded()
       UIApplication.shared.registerForRemoteNotifications()
     }
   }
@@ -220,8 +227,14 @@ class GocabNativePlugin: Plugin, CLLocationManagerDelegate, MessagingDelegate, U
     let didRegisterSel = sel_registerName("application:didRegisterForRemoteNotificationsWithDeviceToken:")
     let didRegisterBlock: @convention(block) (AnyObject, UIApplication, Data) -> Void = { [weak self] _, _, deviceToken in
       Messaging.messaging().apnsToken = deviceToken
+      // Same Swift 6 strict-concurrency fix as getFcmToken above — Firebase's
+      // own completion handler isn't actor-isolated and could call back on
+      // any thread, so the weakly-captured self is only actually touched
+      // after an explicit, compiler-verifiable hop to the main actor.
       Messaging.messaging().token { token, error in
-        self?.resolvePendingFcmTokenInvokes(token: token, error: error)
+        Task { @MainActor [weak self] in
+          self?.resolvePendingFcmTokenInvokes(token: token, error: error)
+        }
       }
     }
     let didRegisterImp = imp_implementationWithBlock(didRegisterBlock as Any)
