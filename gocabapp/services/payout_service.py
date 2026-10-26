@@ -113,6 +113,33 @@ def _resolve_bank_code(bank_name: str) -> str | None:
     return None
 
 
+_RESOLVE_URL = "https://api.paystack.co/bank/resolve"
+
+
+def resolve_account_name(account_number: str, bank_code: str) -> str | None:
+    """Asks Paystack whose account this actually is — used both as a
+    live preview before a driver saves changed bank details (so they can
+    catch a mistyped digit before it becomes their payout destination) and
+    re-checked server-side at save time, since a client-supplied name can't
+    be trusted. Returns None on anything other than a clean success —
+    an unresolvable account must block the save, never silently pass
+    through with a blank name."""
+    try:
+        response = requests.get(
+            _RESOLVE_URL,
+            headers=_auth_header(),
+            params={"account_number": account_number, "bank_code": bank_code},
+            timeout=_TIMEOUT,
+        )
+    except requests.RequestException:
+        logger.exception("Paystack account resolve request failed")
+        return None
+    if response.status_code != 200:
+        return None
+    data = (response.json() if response.content else {}).get("data") or {}
+    return data.get("account_name")
+
+
 def _get_or_create_recipient(driver: Driver) -> str | None:
     if driver.paystack_recipient_code:
         return driver.paystack_recipient_code
@@ -323,12 +350,20 @@ def create_payout_for_ride(ride: RideRequest) -> DriverPayout | None:
     platform_fee = round(float(ride.total_fare) - amount)
 
     try:
-        payout = DriverPayout.objects.create(
-            driver=ride.driver.driver,
-            ride=ride,
-            amount=amount,
-            platform_fee=platform_fee,
-        )
+        # The nested atomic() gives this its own savepoint (2026-10-07,
+        # caught by a test) — without it, catching IntegrityError here only
+        # works by accident when nothing outside this call is already
+        # inside a transaction. The one caller today happens not to be, but
+        # this function exists specifically to survive a race condition,
+        # so it has to stay safe to call from anywhere, not just its
+        # current one call site.
+        with transaction.atomic():
+            payout = DriverPayout.objects.create(
+                driver=ride.driver.driver,
+                ride=ride,
+                amount=amount,
+                platform_fee=platform_fee,
+            )
     except IntegrityError:
         # A DriverPayout already exists for this ride — the OneToOneField
         # is exactly the guard for a duplicate webhook delivery racing the
@@ -407,6 +442,26 @@ def initiate_instant_cashout(driver: Driver) -> tuple[dict, int]:
         DriverPayout.objects.filter(id__in=payout_ids).update(batch=batch)
 
     initiate_transfer_for_batch(batch)
+    # initiate_transfer_for_batch is a side-effecting call (updates batch.status
+    # in place, never raises) — its own caller here used to return "success"
+    # unconditionally regardless of what actually happened, so a real Paystack
+    # rejection (e.g. insufficient balance — confirmed live: the driver saw
+    # "on its way to your bank account" while Paystack's dashboard showed zero
+    # transfers ever made) was silently reported to the driver as success.
+    # refresh_from_db to see what actually happened before telling them anything.
+    batch.refresh_from_db()
+    if batch.status != "processing":
+        # "processing" is the real initial post-attempt state (see
+        # initiate_transfer_for_batch/_claim_batch_for_transfer) — Paystack's
+        # transfer.success/transfer.failed webhook is what later confirms
+        # "paid" or "failed" for real, same as every other payout path here.
+        # A non-"processing" status this soon means _send_transfer's HTTP
+        # call itself failed outright (bad request, insufficient balance,
+        # network error) before ever reaching Paystack's async transfer flow.
+        return {
+            "status": "error",
+            "error": "Your cash-out could not be sent right now. Please try again shortly.",
+        }, 502
     return {
         "status": "success",
         "amount": float(batch.amount),
@@ -501,7 +556,7 @@ def send_weekly_payout_reminder() -> dict:
             "rows": driver_rows,
             "note": note,
             "button_label": "Open payouts",
-            "button_url": f"{settings.ADMIN_SITE_URL}/admin/gocabapp/driverpayout/",
+            "button_url": f"{settings.BASE_URL}/admin/gocabapp/driverpayout/",
         },
     )
     logger.info("Weekly payout reminder sent: %s driver(s) owed", len(rows))
