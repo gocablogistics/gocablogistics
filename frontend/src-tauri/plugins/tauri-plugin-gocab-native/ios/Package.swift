@@ -48,13 +48,21 @@ let package = Package(
                 .product(name: "FirebaseMessaging", package: "firebase-ios-sdk"),
             ],
             path: "Sources",
-            // Bundled into this target's own resource bundle, loaded via
-            // Bundle.module in configureFirebaseIfPossible — not Bundle.main,
-            // since there's no way to place a file into the generated
-            // gen/apple app target directly (see that function's comment).
-            // .copy, not .process: a plist with real config values should
-            // land in the bundle byte-for-byte, not get re-processed.
-            resources: [.copy("GoogleService-Info.plist")],
+            // No `resources:` here — GoogleService-Info.plist used to be
+            // declared as a bundled resource, loaded at runtime via
+            // Bundle.module, but that crashed the app on every single
+            // launch: confirmed via a real symbolicated on-device crash
+            // that Bundle.module's auto-generated bundle finder fatalErrors
+            // when it can't locate its own resource bundle, which is
+            // exactly what happens for a STATIC library target (this
+            // package's .library(type: .static) above) built through
+            // Tauri's generated Xcode project — it apparently never adds a
+            // "Copy Bundle Resources" step for a static SPM target's
+            // generated bundle. Fixed in GocabNativePlugin.swift by
+            // building FirebaseOptions directly from hardcoded values
+            // instead of depending on any bundled file at all — see
+            // configureFirebaseIfPossible's comment.
+            //
             // tools-version 6.1 is needed to even parse Firebase's own
             // manifest, but that also silently switched this target's
             // *language mode* to Swift 6, enabling strict concurrency

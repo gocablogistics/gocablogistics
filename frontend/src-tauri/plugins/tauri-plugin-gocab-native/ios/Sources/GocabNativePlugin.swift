@@ -21,10 +21,10 @@ import WebKit
 //    UIBackgroundModes entry is iOS's equivalent of "keep running while
 //    backgrounded"). Needs NSLocationAlwaysAndWhenInUseUsageDescription and
 //    the location background mode in Info.plist.
-//  - getFcmToken: real — GoogleService-Info.plist is bundled as a resource
-//    on this target (see Package.swift) and loaded in
-//    configureFirebaseIfPossible, which falls back to a clear "not
-//    configured" rejection instead of hanging if that file is ever missing.
+//  - getFcmToken: real — FirebaseOptions is built directly from hardcoded
+//    values in configureFirebaseIfPossible (see that function's comment for
+//    why: the earlier Bundle.module/SPM-resource approach crashed the app
+//    on every launch, confirmed via a real symbolicated crash report).
 //    WKWebView apps can't receive the APNs device token through any normal
 //    Tauri/UIKit hook, so this injects application:didRegisterForRemoteNotifications...
 //    onto the Tao-generated AppDelegate class at runtime via class_addMethod
@@ -70,25 +70,38 @@ class GocabNativePlugin: Plugin, CLLocationManagerDelegate, MessagingDelegate, U
     UNUserNotificationCenter.current().delegate = self
   }
 
-  // GoogleService-Info.plist ships as a bundled SPM resource on this target
-  // (see Package.swift) once it exists — Bundle.module is SPM's accessor
-  // for a package's own resource bundle, NOT the main app bundle, since
-  // Firebase's auto-discovery only looks at Bundle.main and this plugin has
-  // no way to place a file into the generated gen/apple app target (unlike
-  // Info.plist, which Tauri explicitly documents merging — nothing else
-  // gets that treatment). FirebaseOptions(contentsOfFile:) accepts any
-  // path, so loading it explicitly from the plugin's own bundle sidesteps
-  // the problem entirely instead of fighting Tauri's generated project.
+  // Confirmed via a real symbolicated on-device crash (not guessed): the
+  // file-based approach this used before — bundling GoogleService-Info.plist
+  // as an SPM resource and loading it through Bundle.module — crashed the
+  // app on every single launch. Bundle.module's auto-generated bundle
+  // finder fatalErrors when it can't locate its own resource bundle at
+  // runtime, which is exactly what happened here: this target is a STATIC
+  // library (Package.swift's .library(type: .static)), and Tauri's
+  // generated Xcode project apparently never adds a "Copy Bundle Resources"
+  // step for a static SPM target's generated resource bundle — gen/apple is
+  // regenerated fresh every CI run with zero local way to have caught this
+  // ahead of time.
+  //
+  // Fixed by not depending on any bundled file at all: FirebaseOptions has
+  // a manual initializer (confirmed directly against FIROptions.h) that
+  // takes the same handful of non-secret client identifiers directly as
+  // Swift values — the exact same values GoogleService-Info.plist held,
+  // just no longer riding on Bundle.module to find them. Same sensitivity
+  // class as Android's already-committed google-services.json; this isn't
+  // a new exposure.
   private func configureFirebaseIfPossible() {
     guard FirebaseApp.app() == nil else {
       firebaseConfigured = true
       return
     }
-    guard let path = Bundle.module.path(forResource: "GoogleService-Info", ofType: "plist"),
-          let options = FirebaseOptions(contentsOfFile: path) else {
-      NSLog("[gocab-native] GoogleService-Info.plist not bundled yet — push notifications stay disabled until it's added")
-      return
-    }
+    let options = FirebaseOptions(
+      googleAppID: "1:1002354981222:ios:9c2b5365c4c4ee2913f0a7",
+      gcmSenderID: "1002354981222"
+    )
+    options.apiKey = "AIzaSyB-G_it-FeUXU_JuGCsCSkP9BLhf2XqKpI"
+    options.bundleID = "com.gocab.app"
+    options.projectID = "gocab-logistics"
+    options.storageBucket = "gocab-logistics.firebasestorage.app"
     FirebaseApp.configure(options: options)
     Messaging.messaging().delegate = self
     firebaseConfigured = true
