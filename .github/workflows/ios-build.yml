@@ -101,3 +101,20 @@ jobs:
           name: gocab-ios-ipa
           path: frontend/src-tauri/gen/apple/**/*.ipa
           if-no-files-found: error
+
+      # A release-config archive build normally produces dSYMs alongside the
+      # .ipa — needed to turn a raw on-device crash report (all
+      # "imageOffset"/no symbol names, since TestFlight builds ship
+      # stripped) into actual function names and line numbers via atos.
+      # Never uploaded before now, so the "could not send code"/icon/etc.
+      # bugs this session were all diagnosed from source review or live
+      # device inspection — this is the first actual native *crash* hit,
+      # which needs a dSYM to read at all. warn, not error: the exact path
+      # Tauri's export produces this at isn't confirmed yet, same
+      # uncertainty the .ipa wildcard above already had on its first run.
+      - name: Upload dSYMs for crash symbolication
+        uses: actions/upload-artifact@v4
+        with:
+          name: gocab-ios-dsyms
+          path: frontend/src-tauri/gen/apple/**/*.dSYM
+          if-no-files-found: warn
