@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { openExternal } from "../lib/openExternal";
 import type { ActiveRideOut, RideMessageOut } from "../api/rides";
 import { getFeatureFlags } from "../api/flags";
 import NotificationBell from "./NotificationBell";
@@ -183,14 +184,20 @@ export default function ActiveRideScreen({
               Drivers are busy or unavailable in your area right now. You can keep waiting,
               cancel and try again, or call GoCab support for help finding you a ride.
             </p>
+            {/* openExternal (lib/openExternal.ts — this file's own established
+                pattern, already used by mapVisuals.ts/RiderHome.tsx), not a
+                plain <a href="tel:">: WKWebView on iOS never auto-hands-off
+                non-http(s) schemes to the OS (confirmed directly in WRY's own
+                navigation.rs — its policy handler has no scheme-specific logic
+                at all), so a tel: anchor just silently does nothing on tap. */}
             {supportPhone && (
-              <a
-                href={`tel:${supportPhone}`}
+              <button
+                onClick={() => openExternal(`tel:${supportPhone}`)}
                 className="text-center py-2.5 rounded-full bg-amber-500/15 text-amber-300 font-semibold text-sm"
               >
                 <i className="fa-solid fa-phone mr-2" />
                 Call GoCab support
-              </a>
+              </button>
             )}
           </div>
         )}
@@ -266,13 +273,16 @@ export default function ActiveRideScreen({
                 silently did nothing on tap (invalid tel: URI, no error).
                 Disable it instead so it's honest about not being callable. */}
             {ride.driver.phone && ride.driver.phone !== "Not available" ? (
-              <a
-                href={`tel:${ride.driver.phone}`}
+              <button
+                onClick={() => {
+                  const phone = ride.driver?.phone;
+                  if (phone) openExternal(`tel:${phone}`);
+                }}
                 className="flex-1 py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold flex items-center justify-center gap-2"
               >
                 <i className="fa-solid fa-phone" />
                 Call driver
-              </a>
+              </button>
             ) : (
               <button
                 disabled

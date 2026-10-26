@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { openExternal } from "../lib/openExternal";
 import type { DriverActiveRideOut, RideMessageOut } from "../api/rides";
 import NotificationBell from "./NotificationBell";
 import NavDrawer from "./NavDrawer";
@@ -207,15 +208,25 @@ export default function DriverActiveRideScreen({
                 straight into a tel: href used to look like a working button
                 that silently did nothing on tap (invalid tel: URI, no
                 error). Disable it instead so it's honest about not being
-                callable. */}
+                callable.
+                Separately: openExternal (lib/openExternal.ts — this
+                codebase's own established pattern for this), not a plain
+                <a href="tel:">, even once a real number is confirmed —
+                WKWebView on iOS never auto-hands-off non-http(s) schemes to
+                the OS (confirmed directly in WRY's own navigation.rs, which
+                has no scheme-specific logic at all), so a tel: anchor just
+                silently does nothing on tap there. */}
             {ride.passenger.phone && ride.passenger.phone !== "Not available" ? (
-              <a
-                href={`tel:${ride.passenger.phone}`}
+              <button
+                onClick={() => {
+                  const phone = ride.passenger.phone;
+                  if (phone) openExternal(`tel:${phone}`);
+                }}
                 className="flex-1 py-3 rounded-full bg-white/10 border border-white/20 text-white font-semibold flex items-center justify-center gap-2"
               >
                 <i className="fa-solid fa-phone" />
                 Call passenger
-              </a>
+              </button>
             ) : (
               <button
                 disabled
