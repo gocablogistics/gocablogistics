@@ -246,6 +246,13 @@ export default function DriverHome() {
       };
       socket.onclose = () => {
         if (cancelled) return;
+        // Any chat message sent while this socket was down is gone from the
+        // live stream for good otherwise — subscribing to the ride's group
+        // is an async round trip (consumers.py's subscribe handler does a
+        // DB permission check before actually joining), and the backend
+        // never backfills messages sent in that gap. Same reasoning as
+        // handleOpenChat's re-fetch below.
+        getRideMessages(rideId, accessToken!).then(setMessages).catch(() => {});
         reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS);
       };
     }
@@ -420,9 +427,21 @@ export default function DriverHome() {
     }
   }
 
+  // Re-fetches on open rather than trusting only the live websocket stream
+  // to have delivered everything — see the websocket effect's onclose
+  // comment above for why a message can be permanently missed from the
+  // live stream (most commonly the very first message of a ride, sent
+  // right as it goes active, racing this socket's subscribe). By the time
+  // someone actually taps to open the chat panel, that race has long since
+  // resolved, so a plain re-fetch reliably catches anything missed.
   function handleOpenChat() {
     setChatOpen(true);
     setUnreadCount(0);
+    if (activeRide && accessToken) {
+      getRideMessages(activeRide.ride_id, accessToken)
+        .then(setMessages)
+        .catch(() => {});
+    }
   }
 
   async function handleDriverCancel() {

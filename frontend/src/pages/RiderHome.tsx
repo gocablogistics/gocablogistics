@@ -173,6 +173,10 @@ export default function RiderHome() {
         if (cancelled) return;
         reconnectTimer = setTimeout(() => {
           getActiveRide(accessToken!).then(applyRide).catch(() => {});
+          // Same reasoning as handleOpenChat's re-fetch: any chat message
+          // sent while this socket was down is gone from the live stream
+          // for good otherwise, same subscribe-race/no-backfill gap.
+          getRideMessages(ride!.ride_id, accessToken!).then(setMessages).catch(() => {});
           connect();
         }, RECONNECT_DELAY_MS);
       };
@@ -436,9 +440,24 @@ export default function RiderHome() {
     }
   }
 
+  // Re-fetches on open rather than trusting only the live websocket stream
+  // to have delivered everything: subscribing to the ride's update group is
+  // an async round trip (consumers.py's subscribe handler does a DB
+  // permission check before actually joining the group), and the backend
+  // never backfills messages sent in that gap — a message sent right as the
+  // ride goes active (the very first message, most commonly) can land
+  // between "message broadcast" and "this socket's subscribe completing"
+  // and be gone for good from the live stream. By the time someone actually
+  // taps to open the chat panel, that race has long since resolved, so a
+  // plain re-fetch reliably catches anything that was missed.
   function handleOpenChat() {
     setChatOpen(true);
     setUnreadCount(0);
+    if (ride && accessToken) {
+      getRideMessages(ride.ride_id, accessToken)
+        .then(setMessages)
+        .catch(() => {});
+    }
   }
 
   if (!loadingRide && !ride) {
