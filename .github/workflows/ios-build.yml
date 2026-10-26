@@ -83,9 +83,17 @@ jobs:
         working-directory: frontend
         run: npm run tauri -- icon src-tauri/icons/icon.png
 
+      # --build-number appends ".N" to tauri.conf.json's version to form the
+      # real CFBundleVersion (confirmed directly in Tauri CLI's own source —
+      # config.bundle_version() + "." + build_number). Without this, every
+      # build shares the same CFBundleVersion (just tauri.conf.json's static
+      # "version" field) and Transporter rejects the upload outright once a
+      # build with that exact number already exists on Apple's servers —
+      # hit exactly this today. github.run_number auto-increments on every
+      # workflow run, so this can never collide with a previous upload.
       - name: Build iOS app
         working-directory: frontend
-        run: npm run tauri -- ios build --export-method app-store-connect --ci
+        run: npm run tauri -- ios build --export-method app-store-connect --ci --build-number ${{ github.run_number }}
         env:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
