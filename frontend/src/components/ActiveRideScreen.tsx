@@ -172,7 +172,13 @@ export default function ActiveRideScreen({
 
       <NavDrawer open={menuOpen} onClose={() => setMenuOpen(false)} role="rider" onLogout={onLogout} />
 
-      <div ref={sheetRef} className="relative mt-auto rounded-t-3xl bg-[#181c17] px-6 pt-6 pb-8 flex flex-col gap-4 text-slate-100 max-h-[55vh] overflow-y-auto">
+      {/* min-h-0: without it, a flex child's default min-height: auto lets
+          content grow past max-h-[55vh] instead of actually clipping/
+          scrolling it — a well-known flexbox gotcha. Content (status banner,
+          no-drivers message, driver card, buttons) could exceed 55vh and
+          push "Cancel ride" off the bottom of the screen uncontained,
+          instead of the sheet properly scrolling to reach it. */}
+      <div ref={sheetRef} className="relative mt-auto rounded-t-3xl bg-[#181c17] px-6 pt-6 pb-8 flex flex-col gap-4 text-slate-100 max-h-[55vh] min-h-0 overflow-y-auto">
         <div className="rounded-full bg-[#1be451] text-neutral-900 font-bold text-sm px-5 py-2.5 flex items-center justify-between">
           <span>{liveMessage || STATUS_BANNER[ride.status] || ride.status}</span>
           {ride.total_fare != null && <span>₦{ride.total_fare.toLocaleString()}</span>}

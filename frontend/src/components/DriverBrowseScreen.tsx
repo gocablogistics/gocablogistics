@@ -77,7 +77,11 @@ export default function DriverBrowseScreen({
 
       <NavDrawer open={menuOpen} onClose={() => setMenuOpen(false)} role="driver" onLogout={onLogout} />
 
-      <div ref={sheetRef} className="relative mt-auto rounded-t-3xl bg-[#181c17] px-6 pt-6 pb-8 flex flex-col gap-4 text-slate-100 max-h-[80vh] overflow-y-auto">
+      {/* min-h-0: without it, a flex child's default min-height: auto lets
+          content grow past max-h-[80vh] instead of actually clipping/
+          scrolling it — same bug confirmed on the rider's equivalent
+          screen (ActiveRideScreen.tsx), cutting off its own bottom button. */}
+      <div ref={sheetRef} className="relative mt-auto rounded-t-3xl bg-[#181c17] px-6 pt-6 pb-8 flex flex-col gap-4 text-slate-100 max-h-[80vh] min-h-0 overflow-y-auto">
         {summary && (
           <div className="rounded-2xl bg-white/5 border border-white/10 p-4 flex flex-col gap-1">
             <p className="text-white font-bold text-lg">₦{summary.todays_earnings.toLocaleString()} <span className="text-slate-400 text-xs font-normal">today</span></p>
