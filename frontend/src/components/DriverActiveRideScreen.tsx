@@ -117,14 +117,14 @@ export default function DriverActiveRideScreen({
 
       <button
         onClick={() => setMenuOpen(true)}
-        className="absolute top-4 left-4 z-10 bg-black/40 rounded-full w-10 h-10 flex items-center justify-center text-white"
+        className="absolute top-[calc(env(safe-area-inset-top)+1rem)] left-4 z-10 bg-black/40 rounded-full w-10 h-10 flex items-center justify-center text-white"
         aria-label="Menu"
       >
         <i className="fa-solid fa-bars" />
       </button>
 
       {accessToken && (
-        <div className="absolute top-4 right-4 z-10 bg-black/40 rounded-full p-1.5 text-white">
+        <div className="absolute top-[calc(env(safe-area-inset-top)+1rem)] right-4 z-10 bg-black/40 rounded-full p-1.5 text-white">
           <NotificationBell accessToken={accessToken} />
         </div>
       )}
