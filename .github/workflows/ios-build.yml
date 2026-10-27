@@ -83,17 +83,24 @@ jobs:
         working-directory: frontend
         run: npm run tauri -- icon src-tauri/icons/icon.png
 
-      # --build-number appends ".N" to tauri.conf.json's version to form the
-      # real CFBundleVersion (confirmed directly in Tauri CLI's own source —
-      # config.bundle_version() + "." + build_number). Without this, every
-      # build shares the same CFBundleVersion (just tauri.conf.json's static
-      # "version" field) and Transporter rejects the upload outright once a
-      # build with that exact number already exists on Apple's servers —
-      # hit exactly this today. github.run_number auto-increments on every
-      # workflow run, so this can never collide with a previous upload.
+      # Sets bundle.iOS.bundleVersion directly (confirmed via Tauri's own
+      # config.rs: "Translates to the bundle's CFBundleVersion property") —
+      # NOT --build-number, which was tried first and made things worse:
+      # that flag concatenates onto the full app version
+      # (config.bundle_version() + "." + N, confirmed in Tauri CLI's
+      # build.rs), producing "0.1.1.29" instead of a clean "29". Apple
+      # compares CFBundleVersion component-by-component — "0.1.1.29" against
+      # this app's existing plain-integer build history (9, 8, 7, ...)
+      # compares "0" against "9" on the very first component and loses, so
+      # TestFlight never offered it as an update at all despite uploading
+      # successfully with no error. A clean integer from github.run_number
+      # (which auto-increments on every workflow run, so it can never
+      # collide with a previous upload) compares correctly against both the
+      # old plain-integer builds and the one bad "0.1.1.28" build already
+      # sitting on Apple's servers from before this fix.
       - name: Build iOS app
         working-directory: frontend
-        run: npm run tauri -- ios build --export-method app-store-connect --ci --build-number ${{ github.run_number }}
+        run: npm run tauri -- ios build --export-method app-store-connect --ci --config '{"bundle":{"iOS":{"bundleVersion":"${{ github.run_number }}"}}}'
         env:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
