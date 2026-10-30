@@ -83,6 +83,26 @@ jobs:
         working-directory: frontend
         run: npm run tauri -- icon src-tauri/icons/icon.png
 
+      # Enabling "Push Notifications" on the App ID in the Apple Developer
+      # portal only makes the capability available — it does NOT get baked
+      # into the app automatically. Confirmed directly against a real signed
+      # .ipa from this pipeline (`codesign -d --entitlements :- GoCab\
+      # Logistics.app`): the entitlements block had application-identifier/
+      # team-identifier/get-task-allow/beta-reports-active (all auto-added
+      # by Xcode's signing) but no aps-environment key at all — which is
+      # exactly why iOS never issued the app an APNs token and
+      # getFcmToken() silently failed on every build so far (zero iOS rows
+      # ever appeared in the production DeviceToken table, confirmed
+      # directly against prod). Tauri's iOS template has no config field for
+      # this (confirmed against tauri-utils' IosConfig and the "xcode"
+      # template pack — no entitlements field, no generated file with real
+      # content), so this step copies a real one in after `ios init`
+      # generates the Xcode project but before the build/codesign step reads
+      # it. "production" (not "development") because this is signed with an
+      # Apple Distribution certificate for App Store Connect/TestFlight.
+      - name: Add push-notification entitlement
+        run: cp frontend/src-tauri/ios-entitlements/gocab_iOS.entitlements frontend/src-tauri/gen/apple/gocab_iOS/gocab_iOS.entitlements
+
       # Sets bundle.iOS.bundleVersion directly (confirmed via Tauri's own
       # config.rs: "Translates to the bundle's CFBundleVersion property") —
       # NOT --build-number, which was tried first and made things worse:
