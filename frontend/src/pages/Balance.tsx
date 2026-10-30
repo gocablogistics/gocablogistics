@@ -53,7 +53,7 @@ export default function Balance() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#20241f] text-slate-100">
+    <div className="safe-area-shell fixed inset-0 flex flex-col bg-[#20241f] text-slate-100">
       <div className="flex items-center gap-3 px-4 pt-6 pb-4">
         <button
           onClick={() => navigate("/driver")}
