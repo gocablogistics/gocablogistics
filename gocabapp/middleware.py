@@ -72,14 +72,13 @@ class JWTCookieAuthenticationMiddleware:
         still good — rotate quietly so the browser session doesn't drop
         every half hour the way the old Django session did every 7 days."""
         try:
-            new_refresh = services.rotate_refresh_token(refresh_str)
+            pair = services.rotate_refresh_token(refresh_str)
         except Exception:
             return None, None
 
-        try:
-            user = User.objects.get(id=new_refresh["user_id"])
-        except User.DoesNotExist:
+        user = JWTCookieAuthenticationMiddleware._user_from_access(pair["access"])
+        if user is None:
             return None, None
 
-        tokens = {"access": str(new_refresh.access_token), "refresh": str(new_refresh)}
+        tokens = {"access": pair["access"], "refresh": pair["refresh"]}
         return user, tokens

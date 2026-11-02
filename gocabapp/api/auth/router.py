@@ -156,12 +156,7 @@ def register_driver(
 
 @router.post("/refresh", response=RefreshOut)
 def refresh_token(request, payload: RefreshIn):
-    new_refresh = services.rotate_refresh_token(payload.refresh)
-    return {
-        "access": str(new_refresh.access_token),
-        "refresh": str(new_refresh),
-        "token_type": "bearer",
-    }
+    return services.rotate_refresh_token(payload.refresh)
 
 
 @router.post("/logout", response=MessageOut)
