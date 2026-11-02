@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
-// TODO: swap in the real support inbox before launch.
 const SUPPORT_EMAIL = "support@gocablogistics.com";
 
 // GoCab is a courier/delivery app, not a passenger ride-hailing app — the
