@@ -1,0 +1,52 @@
+{% extends "legal/_base.html" %}
+{% block title %}Privacy Policy — GoCab{% endblock %}
+{% block content %}
+<h1>Privacy Policy</h1>
+<p class="updated">Last updated 22 September 2026</p>
+
+<p>GoCab ("we", "us") runs a bike courier and delivery service connecting senders with
+couriers. This page explains what information we collect, why, and what choices you
+have, for both riders (people sending or receiving a package) and drivers (couriers).</p>
+
+<h2>Information we collect</h2>
+<p><strong>Account details.</strong> Your phone number and email are how we identify your account and send you a one-time login code. GoCab doesn't use passwords.</p>
+<p><strong>Driver verification documents.</strong> Drivers provide a National Identification Number, a driver's license, a selfie, vehicle details and a photo, and bank account details for payouts. This is required so we can verify who's operating on the platform and pay drivers correctly.</p>
+<p><strong>Location.</strong> A rider's pickup and drop-off addresses, and a driver's live location while online or on a trip, so we can match rides and show accurate progress. Background location on a driver's device only runs while they're online, shown by a persistent notification.</p>
+<p><strong>Trip and payment information.</strong> Ride history, fares, and payment status. Card payments are processed by Paystack directly. GoCab never receives or stores your full card number.</p>
+<p><strong>Messages and ratings.</strong> In-ride chat messages between a rider and driver for that trip, and the star ratings and comments you leave after a ride.</p>
+<p><strong>Device and push notification data.</strong> A device token so we can send you ride updates and alerts through Firebase Cloud Messaging.</p>
+
+<h2>How we use it</h2>
+<ul>
+  <li>Matching riders with nearby drivers and calculating fares and pickup times</li>
+  <li>Processing payments and driver payouts</li>
+  <li>Sending ride status updates, chat messages, and account alerts</li>
+  <li>Verifying driver identity and preventing fraud or abuse (e.g. repeated non-payment or cancellations)</li>
+  <li>Responding to support requests and resolving disputes between riders and drivers</li>
+</ul>
+
+<h2>Who we share it with</h2>
+<p>We don't sell your information. It's shared only with the services that make GoCab work:</p>
+<ul>
+  <li><strong>Paystack</strong>, to process card payments and driver bank transfers</li>
+  <li><strong>Google</strong>, for maps, address search, and route/fare calculation</li>
+  <li><strong>Firebase (Google)</strong>, to deliver push notifications</li>
+  <li>The other party on a trip: a driver sees the rider's name, phone number, and pickup/drop-off; a rider sees the driver's name, phone, photo, vehicle, and rating</li>
+</ul>
+
+<h2>How long we keep it</h2>
+<p>Ride, payment, and dispute records are kept for as long as needed for accounting, tax, and fraud-prevention purposes, even after an account is deleted. Live location is not retained once a trip ends.</p>
+
+<h2>Your choices</h2>
+<p>You can delete your account at any time from within the app (Profile → Delete account), which deactivates it and removes your phone number and email from our active records. To request deletion without access to the app, email us at <a href="mailto:support@gocablogistics.com">support@gocablogistics.com</a>.</p>
+<p>Some records (completed trips, payments, and any open dispute) are kept even after deletion, as described above.</p>
+
+<h2>Children</h2>
+<p>GoCab is not directed at children, and both riders and drivers must be old enough to hold a valid means of payment or a driver's license respectively.</p>
+
+<h2>Changes to this policy</h2>
+<p>We'll update the date at the top of this page if this policy changes. Continuing to use GoCab after a change means you accept the update.</p>
+
+<h2>Contact us</h2>
+<p>Questions about this policy or your data, email <a href="mailto:support@gocablogistics.com">support@gocablogistics.com</a>.</p>
+{% endblock %}

@@ -21,6 +21,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from gocabapp.api.main import api as ninja_api
+from gocabapp.legal_views import PrivacyPolicyView, SupportView, TermsView
 
 import os
 
@@ -28,5 +29,8 @@ import os
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", ninja_api.urls),
+    path("privacy", PrivacyPolicyView.as_view(), name="privacy_policy"),
+    path("terms", TermsView.as_view(), name="terms"),
+    path("support", SupportView.as_view(), name="support"),
     path("", include("gocabapp.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

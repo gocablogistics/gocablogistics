@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}GoCab{% endblock %}</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    background: #20241f;
+    color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+    line-height: 1.6;
+  }
+  h1 { color: #fff; font-size: 1.5rem; margin-bottom: 0.25rem; }
+  h2 { color: #fff; font-size: 1.1rem; margin-top: 2rem; margin-bottom: 0.5rem; }
+  p, li { color: #cbd5e1; font-size: 0.95rem; }
+  .updated { color: #94a3b8; font-size: 0.8rem; margin-bottom: 2rem; }
+  a { color: #1be451; }
+  ul { padding-left: 1.25rem; }
+</style>
+</head>
+<body>
+{% block content %}{% endblock %}
+</body>
+</html>
