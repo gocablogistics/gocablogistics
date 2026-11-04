@@ -33,7 +33,7 @@ export default function Home() {
   if (loading || user) return <Loader />;
 
   return (
-    <div className="relative w-full max-w-[480px] mx-auto min-h-dvh bg-[#20241f] overflow-hidden flex flex-col text-slate-100">
+    <div className="safe-area-shell relative w-full max-w-[480px] mx-auto min-h-dvh bg-[#20241f] overflow-hidden flex flex-col text-slate-100">
       <div className="relative bg-[#8c978f] pt-10 pb-16 px-6 flex flex-col items-center flex-[1.3] justify-between">
         {/* Logo */}
         <div className="flex flex-col items-center z-10 pt-2">
