@@ -1,10 +1,8 @@
-import hashlib
 import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from ...utils.branded_mail import send_branded_email
-from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from ninja.errors import HttpError
@@ -196,45 +194,35 @@ def issue_token_pair(user: User, role: str) -> RefreshToken:
     return refresh
 
 
-ROTATION_REPLAY_GRACE_SECONDS = 60
-
-
-def _rotation_replay_key(refresh_str: str) -> str:
-    # The raw token can't be used as a cache key as-is (length/charset), and
-    # shouldn't be logged/stored verbatim either — hash it the same way the
-    # OTP cache peppers codes (see otp.py), just without the SECRET_KEY
-    # pepper since this isn't guarding a short guessable value.
-    return f"refresh-replay:{hashlib.sha256(refresh_str.encode()).hexdigest()}"
-
-
 def rotate_refresh_token(refresh_str: str) -> dict:
     """Rotates a refresh token, returning a plain {access, refresh,
     token_type} dict.
 
-    A mobile app backgrounded for hours (a driver asleep with the app open
-    overnight) keeps firing this every ~20 minutes the whole time. If the
-    OS suspends the app between the server successfully rotating the token
-    and the client receiving/storing that response — routine on iOS for a
-    long-backgrounded WKWebView — the client is left holding a refresh
-    token the server has already blacklisted, and the next attempt (on
-    resume, hours later) looks identical to a replayed/stolen token: a
-    hard 401 that silently logs the driver out, found when they checked
-    the app the next morning and were already signed out.
+    Deliberately does NOT blacklist the old token after issuing a new one
+    (an earlier version did — see git history). A mobile app backgrounded
+    for hours (a driver asleep with the app open overnight) keeps firing
+    this every ~20 minutes the whole time; if the OS suspends the app
+    between the server rotating the token and the client receiving/saving
+    that response — routine on iOS for a long-backgrounded WKWebView — the
+    client is left holding a now-dead token, and doesn't retry until it's
+    reopened, which can be hours later. A short replay-grace-window fix
+    (cache the issued pair for ~60s, replay it on an exact reuse) was tried
+    first and still failed in production: the real gap between "server
+    rotated it" and "client actually retries" was hours, not seconds, so
+    no fixed short window was ever going to cover it — confirmed directly
+    against a real 401 in the production logs several hours after that fix
+    was already live.
 
-    Mitigated with a short-lived replay cache: the pair issued for a given
-    refresh token is cached for ROTATION_REPLAY_GRACE_SECONDS, so a reuse
-    of that *exact* token within the grace window is treated as "the
-    client never got my last response" and replayed, not as theft. A
-    token reused after the grace window — the only way a truly stolen
-    token could be replayed, since an attacker would need the token
-    in the first place — still hits the normal blacklist rejection below.
+    Not blacklisting removes the failure mode outright rather than trying
+    to guess a long-enough window. The security cost is narrow: a stolen
+    refresh token is no longer killed the instant the legitimate client
+    rotates past it, but it was already bounded by the 30-day expiry
+    either way, and an explicit logout (blacklist_refresh_token, below)
+    still invalidates immediately.
     """
     try:
         old = RefreshToken(refresh_str)
     except TokenError as exc:
-        cached = cache.get(_rotation_replay_key(refresh_str))
-        if cached is not None:
-            return cached
         raise HttpError(401, str(exc) or "Invalid or expired refresh token.")
 
     try:
@@ -247,14 +235,11 @@ def rotate_refresh_token(refresh_str: str) -> dict:
         role, _ = resolve_role_and_profile(user)
 
     new_refresh = issue_token_pair(user, role)
-    pair = {
+    return {
         "access": str(new_refresh.access_token),
         "refresh": str(new_refresh),
         "token_type": "bearer",
     }
-    cache.set(_rotation_replay_key(refresh_str), pair, timeout=ROTATION_REPLAY_GRACE_SECONDS)
-    old.blacklist()
-    return pair
 
 
 def blacklist_refresh_token(refresh_str: str) -> None:
