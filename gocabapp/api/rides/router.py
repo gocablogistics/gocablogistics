@@ -12,7 +12,7 @@ from ninja import Router
 from ninja.errors import HttpError
 from ninja_jwt.authentication import JWTAuth
 
-from ...models import DriverPayout, Notification, Rating, RideRequest, Rider
+from ...models import Driver, DriverPayout, Notification, Rating, RideRequest, Rider
 
 logger = logging.getLogger(__name__)
 from ...services.driver_trip_service import (
@@ -23,7 +23,6 @@ from ...services.driver_trip_service import (
 )
 from ...utils.fare_quote import make_fare_quote, resolve_fare
 from ...utils.payment_confirm import make_payment_confirm_token, payment_confirm_token_matches
-from ...utils.tracking_token import make_tracking_token, resolve_tracking_ride_id
 from ...services.fraud_checks import (
     get_unpaid_completed_ride,
     has_disputed_unpaid_ride,
@@ -52,8 +51,14 @@ from ...services.ride_events import notify_drivers_ride_cancelled, notify_notifi
 from ...utils import calculate_ride_fare, route_with_coords
 from ...utils.distance_utils import get_nearby_rides
 from ...utils.fare_pricing import DRIVER_EARNINGS_RATE
-from ...services.payout_service import get_driver_wallet_balance, initiate_instant_cashout
-from ...utils.ngrok import resolve_frontend_base_url
+from ...services.payout_service import (
+    get_driver_wallet_balance,
+    initiate_instant_cashout,
+    list_bank_options,
+    resolve_account_name,
+)
+from ...utils.branded_mail import send_branded_email
+from ..auth import otp
 from ..auth.schemas import MessageOut
 from ..auth.throttle import throttle
 from ..auth.utils import get_client_ip
@@ -75,12 +80,14 @@ from .schemas import (
     ReferralOut,
     ReferralSummaryOut,
     ReportNonPaymentIn,
+    ResolveBankAccountIn,
+    ResolveBankAccountOut,
+    UpdateBankDetailsIn,
     RequestRideIn,
     RequestRideOut,
     RideHistoryOut,
     RideMessageOut,
     SendMessageIn,
-    TrackingOut,
 )
 
 router = Router(tags=["rides"])
@@ -316,14 +323,6 @@ def active_ride(request):
         if eta:
             pickup_eta_min, driver_distance_km = eta["eta_min"], eta["distance_km"]
 
-    # Only for a trip still actually in flight — tracking a long-finished
-    # (or finished-but-unpaid) ride isn't meaningful, and this function
-    # also serves those as a fallback above.
-    tracking_url = None
-    if ride.status in ("pending", "accepted", "started"):
-        token = make_tracking_token(ride.id)
-        tracking_url = f"{resolve_frontend_base_url()}/track/{token}"
-
     return {
         "ride_id": ride.id,
         "status": ride.status,
@@ -339,50 +338,9 @@ def active_ride(request):
         "payment_method": ride.payment_method,
         "driver": driver,
         "pickup_eta_min": pickup_eta_min,
-        "tracking_url": tracking_url,
         "driver_distance_km": driver_distance_km,
-    }
-
-
-@router.get("/track/{token}", response=TrackingOut)
-def track_ride(request, token: str):
-    # Public, unauthenticated by design — see utils/tracking_token.py and
-    # TrackingOut's own docstring for exactly what this deliberately does
-    # and doesn't expose. Same "don't leak which case it is" shape as
-    # other token-based lookups in this file: an invalid/expired/tampered
-    # token and a nonexistent ride both just 404.
-    ride_id = resolve_tracking_ride_id(token)
-    if ride_id is None:
-        raise HttpError(404, "This tracking link is invalid or has expired.")
-    try:
-        ride = RideRequest.objects.get(id=ride_id)
-    except RideRequest.DoesNotExist:
-        raise HttpError(404, "This tracking link is invalid or has expired.")
-
-    driver_name = driver_photo = None
-    driver_latitude = driver_longitude = None
-    pickup_eta_min = None
-    if ride.driver_id and hasattr(ride.driver, "driver"):
-        d = ride.driver.driver
-        driver_name = display_name(ride.driver, "driver", "Your driver")
-        driver_photo = d.passport_photo.url if d.passport_photo else None
-        driver_latitude, driver_longitude = d.latitude, d.longitude
-        if ride.status == "accepted":
-            eta = compute_pickup_eta(ride, d.latitude, d.longitude)
-            if eta:
-                pickup_eta_min = eta["eta_min"]
-
-    return {
-        "status": ride.status,
-        "destination": ride.destination,
-        "vehicle_type": ride.vehicle_type,
-        "driver_name": driver_name,
-        "driver_photo": driver_photo,
-        "driver_latitude": driver_latitude,
-        "driver_longitude": driver_longitude,
-        "destination_latitude": ride.destination_latitude,
-        "destination_longitude": ride.destination_longitude,
-        "pickup_eta_min": pickup_eta_min,
+        "paid_at": ride.paid_at,
+        "payment_reference": ride.payment_reference,
     }
 
 
@@ -416,6 +374,8 @@ def ride_history(request):
             "completed_at": r.completed_at,
             "other_party_name": display_name(r.driver, "driver", "Driver") if r.driver_id else None,
             "my_rating_submitted": r.id in rated_ride_ids,
+            "paid_at": r.paid_at,
+            "payment_reference": r.payment_reference,
         }
         for r in rides
     ]
@@ -903,6 +863,102 @@ def driver_cashout(request):
         raise HttpError(403, "Driver profile not found")
     body, status = initiate_instant_cashout(request.user.driver)
     return JsonResponse(body, status=status)
+
+
+@router.post("/driver/resolve-bank-account", response=ResolveBankAccountOut, auth=JWTAuth())
+def resolve_bank_account(request, payload: ResolveBankAccountIn):
+    """Live preview before a driver commits to new bank details — shows
+    them whose account Paystack actually thinks this is, so a mistyped
+    digit gets caught before it becomes a payout destination, not after
+    money has already gone to a stranger."""
+    if not hasattr(request.user, "driver"):
+        raise HttpError(403, "Driver profile not found")
+    throttle(
+        f"throttle:resolve-bank:user:{request.user.id}",
+        10, 60 * 10,
+        message="Too many lookups. Please wait a few minutes and try again.",
+    )
+    name = resolve_account_name(payload.account_number, payload.bank_code)
+    if not name:
+        raise HttpError(400, "Could not verify that account. Check the number and bank, then try again.")
+    return {"account_name": name}
+
+
+@router.post("/driver/update-bank-details", response=MessageOut, auth=JWTAuth())
+def update_bank_details(request, payload: UpdateBankDetailsIn):
+    """Changing a payout destination is the single highest-value action a
+    compromised account could take, so this requires a fresh one-time code
+    (not just an existing session) on top of re-verifying the account with
+    Paystack server-side — the client-shown preview name is never trusted
+    on its own. Admin gets an immediate alert either way, so a change is
+    never silent even once it's let through."""
+    if not hasattr(request.user, "driver"):
+        raise HttpError(403, "Driver profile not found")
+    driver = request.user.driver
+
+    if not request.user.email:
+        raise HttpError(400, "Add an email to your account before changing bank details.")
+    otp.verify_code(request.user.email, payload.code)
+
+    account_name = resolve_account_name(payload.account_number, payload.bank_code)
+    if not account_name:
+        raise HttpError(400, "Could not verify that account. Check the number and bank, then try again.")
+
+    bank_name = next(
+        (b["name"] for b in list_bank_options() if b["code"] == payload.bank_code),
+        None,
+    )
+    if not bank_name:
+        raise HttpError(400, "Could not confirm that bank right now. Please try again in a moment.")
+
+    if (
+        Driver.objects.filter(account_number=payload.account_number, bank_name=bank_name)
+        .exclude(id=driver.id)
+        .exists()
+    ):
+        raise HttpError(400, "This bank account is already registered.")
+
+    old_bank, old_account = driver.bank_name, driver.account_number
+
+    driver.bank_name = bank_name
+    driver.account_number = payload.account_number
+    driver.account_holder_name = account_name
+    driver.paystack_bank_code = payload.bank_code
+    driver.paystack_recipient_code = ""  # force a fresh Paystack recipient against the new details
+    try:
+        driver.save(update_fields=[
+            "bank_name", "account_number", "account_holder_name",
+            "paystack_bank_code", "paystack_recipient_code",
+        ])
+    except IntegrityError:
+        # Same small race window as request_ride's IntegrityError guard
+        # above — the .exists() check a few lines up can't fully close it
+        # (two near-simultaneous saves of the same account number can both
+        # pass it before either commits), so the DB's own unique constraint
+        # is the real backstop; this turns that into the same clean error
+        # instead of a 500.
+        raise HttpError(400, "This bank account is already registered.")
+
+    if settings.ADMIN_NOTIFICATION_EMAIL:
+        send_branded_email(
+            subject=f"GoCab: {driver.full_name} changed their payout bank details",
+            to=[settings.ADMIN_NOTIFICATION_EMAIL],
+            template_name="email/admin_alert.html",
+            context={
+                "heading": "Driver changed payout bank details",
+                "intro": f"{driver.full_name} just updated where their payouts are sent.",
+                "rows": [
+                    {"label": "Old bank", "value": f"{old_bank} (ending {old_account[-4:]})" if old_account else "none on file"},
+                    {"label": "New bank", "value": f"{bank_name} (ending {payload.account_number[-4:]})"},
+                    {"label": "Verified account name", "value": account_name},
+                ],
+                "note": "No payout has been sent to this new account yet. This is informational only.",
+                "button_label": "Review driver",
+                "button_url": f"{settings.BASE_URL}/admin/gocabapp/driver/{driver.id}/change/",
+            },
+        )
+
+    return {"detail": "Bank details updated."}
 
 
 @router.get("/driver/payouts", response=list[PayoutOut], auth=JWTAuth())

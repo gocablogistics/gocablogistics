@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Literal, Optional
 
 from ninja import Schema
+from pydantic import field_validator
 
 VehicleType = Literal["Bike", "Bicycle"]
 
@@ -41,6 +42,10 @@ class RideHistoryOut(Schema):
     dispute_status: Optional[str] = None
     my_statement_submitted: bool = False
     my_rating_submitted: bool = False
+    # Receipt fields (see ActiveRideScreen.tsx's receipt modal) — only
+    # meaningful once payment_status == "paid".
+    paid_at: Optional[datetime] = None
+    payment_reference: Optional[str] = None
 
 
 class FareEstimateIn(Schema):
@@ -137,25 +142,11 @@ class ActiveRideOut(Schema):
     # Only set while status == "accepted" (driver heading to the pickup point).
     pickup_eta_min: Optional[int] = None
     driver_distance_km: Optional[float] = None
-    # A no-login link the sender can forward to whoever's actually
-    # receiving the package — see utils/tracking_token.py.
-    tracking_url: Optional[str] = None
-
-
-class TrackingOut(Schema):
-    """Public, unauthenticated — deliberately excludes anything about the
-    sender (name, phone, email) or payment. A recipient following this link
-    only ever needs to know where their package is and when it's arriving."""
-    status: str
-    destination: str
-    vehicle_type: str
-    driver_name: Optional[str] = None
-    driver_photo: Optional[str] = None
-    driver_latitude: Optional[float] = None
-    driver_longitude: Optional[float] = None
-    destination_latitude: Optional[float] = None
-    destination_longitude: Optional[float] = None
-    pickup_eta_min: Optional[int] = None
+    # Only set once payment_status == "paid" — the passenger-facing receipt
+    # (see ActiveRideScreen.tsx) shows these so they can prove to the driver
+    # that payment actually went through.
+    paid_at: Optional[datetime] = None
+    payment_reference: Optional[str] = None
 
 
 class PaymentCallbackOut(Schema):
@@ -244,6 +235,37 @@ class ReferralOut(Schema):
     full_name: str
     joined_at: datetime
     reward_earned: bool
+
+
+def _validate_account_number(v: str) -> str:
+    if not v.isdigit() or len(v) != 10:
+        raise ValueError("Account number must be 10 digits long.")
+    return v
+
+
+class ResolveBankAccountIn(Schema):
+    bank_code: str
+    account_number: str
+
+    @field_validator("account_number")
+    @classmethod
+    def _check_account_number(cls, v: str) -> str:
+        return _validate_account_number(v)
+
+
+class ResolveBankAccountOut(Schema):
+    account_name: str
+
+
+class UpdateBankDetailsIn(Schema):
+    bank_code: str
+    account_number: str
+    code: str
+
+    @field_validator("account_number")
+    @classmethod
+    def _check_account_number(cls, v: str) -> str:
+        return _validate_account_number(v)
 
 
 class ReferralSummaryOut(Schema):
