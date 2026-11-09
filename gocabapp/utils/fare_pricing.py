@@ -78,21 +78,31 @@ def calculate_ride_fare(
     # The total is rounded to the nearest ₦10 (2026-10-03): ₦10 is the
     # smallest amount a Nigerian bank transfer is matched on, so an odd
     # figure like ₦7,497 made the payer's transfer look like the wrong
-    # amount and Paystack reversed it. Line items are whole naira, and the
-    # rounding difference is absorbed into distance so they still add up.
-    distance_fare = round(distance_km * rates["per_km"])
-    time_fare = round(duration_min * rates["per_min"])
-    subtotal = round((rates["base"] + distance_fare + time_fare) * surge)
+    # amount and Paystack reversed it.
+    #
+    # Every line item — base, distance, time — has surge applied and is
+    # rounded individually (2026-10-07, caught by a test asserting the
+    # breakdown sums to the total): the original version only applied
+    # surge to the sum of the raw components, so the displayed base/
+    # distance/time never matched the surge-priced total on any ride
+    # where surge wasn't exactly 1.0 — not a rare rounding edge case, it
+    # was wrong on every single surge-priced ride. The total is now
+    # strictly defined as the sum of these components, not computed
+    # separately and hoped to match them.
+    base_fare = round(rates["base"] * surge)
+    distance_fare = round(distance_km * rates["per_km"] * surge)
+    time_fare = round(duration_min * rates["per_min"] * surge)
+    subtotal = base_fare + distance_fare + time_fare
     total = max(subtotal, round(rates["min_fare"]))
     if distance_km > 50:
         total = min(total, MAX_FARE)
     rounded_total = ((total + 5) // 10) * 10
-    if rounded_total != total and total == subtotal and surge == 1.0:
+    if rounded_total != total and total == subtotal:
         distance_fare += rounded_total - total
     total = rounded_total
 
     result = {
-        "base_fare":        rates["base"],
+        "base_fare":        base_fare,
         "distance_km":      round(distance_km, 2),
         "duration_min":     round(duration_min, 2),
         "distance_fare":    distance_fare,

@@ -130,6 +130,8 @@ def request_ride(request):
             return JsonResponse({"error": "Could not calculate route"}, status=400)
 
         fare = calculate_ride_fare(distance_km, duration_min)
+        if not fare:
+            return JsonResponse({"error": "Could not calculate the fare for this route"}, status=400)
 
         ride = RideRequest.objects.create(
             passenger=request.user,

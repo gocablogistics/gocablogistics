@@ -9,13 +9,13 @@ from django.db import transaction
 from django.utils import timezone
 
 from ..models import DriverCancellation, RideRequest
+from ..services.fraud_checks import is_cash_debt_blocked, is_driver_flagged
 from ..utils.names import display_name
 from ..services.ride_events import (
     build_trip_payload,
     notify_driver_pool,
     notify_rider,
 )
-from ..services.payment_service import _create_payment_link
 
 logger = logging.getLogger(__name__)
 JsonDict = dict[str, Any]
@@ -37,6 +37,16 @@ def _driver_ws_info(user: User) -> dict:
 def run_accept_ride(user: User, ride_id: int) -> tuple[JsonDict, int]:
     if not hasattr(user, "driver"):
         return {"status": "error", "message": "Driver profile not found"}, 403
+    # Mirrors the same checks set_availability already does before letting a
+    # driver go online — needed here too, since an admin flagging (or a cash
+    # debt crossing the threshold) mid-shift doesn't retroactively kick an
+    # already-online driver offline, so without this they could keep
+    # accepting new rides indefinitely until they happened to toggle off
+    # and back on.
+    if is_cash_debt_blocked(user):
+        return {"status": "error", "message": "Cash-ride commission owed. Settle up before accepting new rides."}, 402
+    if is_driver_flagged(user):
+        return {"status": "error", "message": "Your account has been flagged pending review."}, 403
 
     try:
         with transaction.atomic():
@@ -142,11 +152,6 @@ def run_complete_trip(user: User, ride_id: int) -> tuple[JsonDict, int]:
 
         ride.refresh_from_db()
         payload = build_trip_payload(ride, user)
-
-        try:
-            _create_payment_link(ride)
-        except Exception:
-            logger.exception("Payment link creation failed ride=%s", ride_id)
 
         notify_rider(ride.id, {
             "type": "ride_update", "event": "completed",
