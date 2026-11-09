@@ -19,7 +19,14 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # nothing gets sent anywhere, so this is safe to leave in before a Sentry
 # project exists.
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
-if SENTRY_DSN:
+# settings/test.py reassigns SENTRY_DSN to "" below, but that happens AFTER
+# `from .base import *` has already run this block — too late to stop an
+# init() call made here. Checked directly off DJANGO_SETTINGS_MODULE
+# (already set by the time base.py runs, via manage.py's --settings flag)
+# so a test run can never report real test-fixture errors into production
+# Sentry, regardless of what test.py reassigns afterward.
+_running_tests = os.environ.get("DJANGO_SETTINGS_MODULE", "").endswith(".test")
+if SENTRY_DSN and not _running_tests:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
 
@@ -107,7 +114,7 @@ TIME_ZONE = "Africa/Lagos"
 
 # ============ API KEYS ============
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
-BASE_URL = os.getenv("BASE_URL", "https://fidamano.onrender.com")
+BASE_URL = os.getenv("BASE_URL", "https://api.gocablogistics.com")
 # Where the React SPA is served — used as the Paystack callback target for
 # checkouts initiated via the JSON API, so payment returns land back in the
 # SPA instead of the legacy server-rendered pages BASE_URL points at.
@@ -119,7 +126,17 @@ RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 # Disputes still show up in Django admin either way; if this is unset, we
 # just skip the email rather than erroring the report/response request.
 ADMIN_NOTIFICATION_EMAIL = os.getenv("ADMIN_NOTIFICATION_EMAIL", "")
-ADMIN_SITE_URL = os.getenv("ADMIN_SITE_URL", "https://gocablogistics.com")
+# Separate from ADMIN_NOTIFICATION_EMAIL on purpose — server resource
+# alerts (gocab-resource-alert.timer) go to whoever's actually watching
+# infrastructure, which isn't necessarily the same inbox as business
+# alerts (new drivers, disputes, payouts). Falls back to the shared admin
+# address if this isn't set separately.
+RESOURCE_ALERT_EMAIL = os.getenv("RESOURCE_ALERT_EMAIL", "") or ADMIN_NOTIFICATION_EMAIL
+
+# App store review login — see gocabapp/api/auth/otp.py. Unset by default,
+# only ever points at one dedicated reviewer address, never a real user.
+REVIEWER_EMAIL = os.getenv("REVIEWER_EMAIL", "")
+REVIEWER_OTP_CODE = os.getenv("REVIEWER_OTP_CODE", "837215")
 
 # ============ AUTH ============
 AUTH_PASSWORD_VALIDATORS = [
@@ -225,7 +242,15 @@ DRIVER_REPORT_AUTO_FLAG_COUNT = int(os.getenv("DRIVER_REPORT_AUTO_FLAG_COUNT", "
 # does (see fraud_checks.is_rider_flagged) — blocked from booking at all
 # until a human clears it. Paying off any one reported ride only clears
 # that ride's own state, never this account-level flag once it's set.
-RIDER_NONPAYMENT_AUTO_FLAG_COUNT = int(os.getenv("RIDER_NONPAYMENT_AUTO_FLAG_COUNT", "3"))
+RIDER_NONPAYMENT_AUTO_FLAG_COUNT = int(os.getenv("RIDER_NONPAYMENT_AUTO_FLAG_COUNT", "2"))
+
+# A completed ride that's sat unpaid this many days gets escalated by the
+# stale-ride sweep itself (services.stale_ride_service / payment_service.
+# auto_escalate_unpaid_ride), exactly like a driver's own non-payment
+# report — closes the gap where a driver never bothers to tap "report",
+# which otherwise left that rider invisible to RIDER_NONPAYMENT_AUTO_FLAG_COUNT
+# above no matter how long the ride sat unpaid.
+UNPAID_RIDE_AUTO_DISPUTE_DAYS = int(os.getenv("UNPAID_RIDE_AUTO_DISPUTE_DAYS", "3"))
 
 # Abuse protection (services/fraud_checks.py): this many cancellations inside the
 # rolling 24-hour window pauses new bookings (riders) / accepting (drivers) until
@@ -325,7 +350,7 @@ if CLOUDINARY_STORAGE["CLOUD_NAME"]:
 FCM_CREDENTIALS_PATH = os.getenv("FCM_CREDENTIALS_PATH", "")
 FCM_CREDENTIALS_JSON = os.getenv("FCM_CREDENTIALS_JSON", "")
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 WHITENOISE_MAX_AGE = 31536000
 WHITENOISE_USE_FINDERS = True
 
@@ -363,4 +388,4 @@ if RESEND_API_KEY and RESEND_DOMAIN_VERIFIED:
     DEFAULT_FROM_EMAIL = RESEND_FROM_EMAIL
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "GoCab <no-reply@gocab.app>")
+    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "GoCab <no-reply@gocablogistics.com>")

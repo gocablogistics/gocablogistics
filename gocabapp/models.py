@@ -623,6 +623,29 @@ class CashDebtEntry(models.Model):
         return f"{self.driver.full_name} - {self.entry_type} ₦{self.amount}"
 
 
+class RiderPaymentInstrument(models.Model):
+    """One row per (rider, card) pair ever seen on a real Paystack charge
+    attempt — a rider flagged for non-payment who abandons that account and
+    signs up fresh can still be caught if the new account pays with the
+    same card. See payment_service._fingerprint_from_webhook_data /
+    _record_and_check_payment_instrument.
+
+    fingerprint is derived from the card's bin+last4 (or, failing that,
+    Paystack's authorization_code) — never the full card number, which
+    GoCab never receives from Paystack anyway."""
+    rider = models.ForeignKey(Rider, on_delete=models.CASCADE, related_name="payment_instruments")
+    fingerprint = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["rider", "fingerprint"], name="unique_rider_fingerprint"),
+        ]
+
+    def __str__(self):
+        return f"{self.rider.full_name} - {self.fingerprint}"
+
+
 class Trip(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),

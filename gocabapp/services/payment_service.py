@@ -20,7 +20,7 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
-from ..models import Driver, Notification, PaymentDispute, RideRequest, Rider
+from ..models import Driver, Notification, PaymentDispute, RideRequest, Rider, RiderPaymentInstrument
 from ..utils.fare_pricing import calculate_ride_fare, DRIVER_EARNINGS_RATE
 from ..utils.distance_utils import google_distance
 from ..utils.ngrok import resolve_frontend_base_url
@@ -331,6 +331,7 @@ def handle_paystack_webhook(event: dict) -> None:
             ride.id, reference,
         )
 
+    _record_and_check_payment_instrument(ride, data)
     _apply_verified_online_payment(ride, reference, amount)
 
 
@@ -367,7 +368,10 @@ def estimate_fare_from_locations(pickup: str, destination: str, vehicle_type: st
     distance_km, duration_min = google_distance(pickup, destination)
     if distance_km is None:
         return {"error": "Could not calculate route. Check addresses"}, 400
-    return calculate_ride_fare(distance_km, duration_min, vehicle_type), 200
+    fare = calculate_ride_fare(distance_km, duration_min, vehicle_type)
+    if fare is None:
+        return {"error": "Could not calculate a fare for this route. Check that pickup and destination are different."}, 400
+    return fare, 200
 
 
 def initiate_checkout_for_ride(
@@ -585,7 +589,7 @@ def _notify_admin_of_dispute(dispute: PaymentDispute, event: str) -> None:
     ride = dispute.ride
     driver_phone = getattr(getattr(ride.driver, "driver", None), "phone_number", None) if ride.driver else None
     rider_phone = getattr(getattr(ride.passenger, "rider", None), "phone_number", None)
-    admin_url = f"{settings.ADMIN_SITE_URL}/admin/gocabapp/paymentdispute/{dispute.id}/change/"
+    admin_url = f"{settings.BASE_URL}/admin/gocabapp/paymentdispute/{dispute.id}/change/"
     driver_name = ride.driver.driver.full_name if ride.driver and hasattr(ride.driver, "driver") else "Unknown"
     rider_name = ride.passenger.rider.full_name if hasattr(ride.passenger, "rider") else "Unknown"
 
@@ -616,6 +620,33 @@ def _notify_admin_of_dispute(dispute: PaymentDispute, event: str) -> None:
         logger.exception("Failed to email admin about dispute on ride %s", ride.id)
 
 
+def _flag_rider(rider: Rider, reason: str, message: str | None = None) -> None:
+    """Shared consequence behind both auto-flag triggers below (repeat
+    non-payment, and reusing a blocked payment instrument) — blocked from
+    booking until an admin reviews and clears it, same as a manual
+    PaymentDisputeAdmin.flag_rider.
+
+    `reason` is the internal/admin-facing record (Rider.flagged_reason);
+    `message` is what the rider actually sees, and defaults to a generic
+    line only when a caller doesn't have anything more specific to say —
+    a caller that knows exactly why (e.g. repeat non-payment) should pass
+    its own so the rider isn't left guessing which of several possible
+    triggers hit them."""
+    rider.is_flagged = True
+    rider.flagged_reason = reason
+    rider.save(update_fields=["is_flagged", "flagged_reason"])
+
+    rider_user_id = rider.user_id
+    if not rider_user_id:
+        return
+    if message is None:
+        message = "Your account has been flagged pending review. Contact support to continue booking."
+    Notification.objects.filter(user_id=rider_user_id, is_active=True).delete()
+    Notification.objects.create(user_id=rider_user_id, message=message, is_active=True)
+    notify_notification_count(rider_user_id, 1)
+    send_push_to_user(rider_user_id, "Account flagged", message)
+
+
 def _maybe_auto_flag_rider_for_nonpayment(rider_user: User) -> None:
     """Repeat non-payment is a trust problem, not a one-off — a rider who's
     been reported this many times before (lifetime count) gets flagged the
@@ -630,17 +661,109 @@ def _maybe_auto_flag_rider_for_nonpayment(rider_user: User) -> None:
     if report_count < settings.RIDER_NONPAYMENT_AUTO_FLAG_COUNT:
         return
 
-    rider = rider_user.rider
-    rider.is_flagged = True
-    rider.flagged_reason = f"Auto-flagged: reported for non-payment {report_count} times."
-    rider.save(update_fields=["is_flagged", "flagged_reason"])
-
-    message = "Your account has been flagged after repeated non-payment reports. Contact support to continue booking."
-    Notification.objects.filter(user=rider_user, is_active=True).delete()
-    Notification.objects.create(user=rider_user, message=message, is_active=True)
-    notify_notification_count(rider_user.id, 1)
-    send_push_to_user(rider_user.id, "Account flagged", message)
+    _flag_rider(
+        rider_user.rider,
+        f"Auto-flagged: reported for non-payment {report_count} times.",
+        message="Your account has been flagged after repeated non-payment reports. Contact support to continue booking.",
+    )
     logger.warning("Rider auto-flagged for repeat non-payment: user_id=%s count=%s", rider_user.id, report_count)
+
+
+def _fingerprint_from_webhook_data(data: dict) -> str | None:
+    """Derived from the card itself (bin+last4) — never the full card
+    number, which Paystack never actually gives GoCab anyway. Falls back
+    to Paystack's authorization_code if bin/last4 aren't present. Bank
+    transfers don't reliably expose a reusable sender identifier in the
+    webhook payload, so those aren't fingerprinted for now — this only
+    catches card-based evasion."""
+    if data.get("channel") != "card":
+        return None
+    auth = data.get("authorization") or {}
+    bin_, last4 = auth.get("bin"), auth.get("last4")
+    if bin_ and last4:
+        return f"card:{bin_}:{last4}"
+    if auth.get("authorization_code"):
+        return f"auth:{auth['authorization_code']}"
+    return None
+
+
+def _record_and_check_payment_instrument(ride: RideRequest, data: dict) -> None:
+    """Logs the card this payment attempt used against the paying rider,
+    and checks whether that same card has already been seen on a
+    DIFFERENT, already-flagged rider. If so, this is almost certainly the
+    same real person evading a block with a fresh account, so this account
+    gets flagged too instead of waiting for its own history of reports to
+    build back up. Deliberately runs regardless of whether this specific
+    charge's amount matches _apply_verified_online_payment's check — a
+    rejected charge still proves the card was genuinely used."""
+    try:
+        rider = ride.passenger.rider
+    except Rider.DoesNotExist:
+        return
+    fingerprint = _fingerprint_from_webhook_data(data)
+    if not fingerprint:
+        return
+
+    already_blocked_elsewhere = RiderPaymentInstrument.objects.filter(
+        fingerprint=fingerprint, rider__is_flagged=True,
+    ).exclude(rider=rider).exists()
+
+    RiderPaymentInstrument.objects.get_or_create(rider=rider, fingerprint=fingerprint)
+
+    if already_blocked_elsewhere and not rider.is_flagged:
+        _flag_rider(rider, "Auto-flagged: payment card matches another flagged account.")
+        logger.warning(
+            "Rider auto-flagged for reusing a blocked payment instrument: user_id=%s", ride.passenger_id,
+        )
+
+
+def auto_escalate_unpaid_ride(ride: RideRequest) -> bool:
+    """Called by the stale-ride sweep once a completed ride has sat unpaid
+    for settings.UNPAID_RIDE_AUTO_DISPUTE_DAYS. Mirrors report_nonpayment's
+    mechanics (open a PaymentDispute, notify admin, re-check the auto-flag
+    threshold) but with its own, accurate wording — this isn't the driver
+    reporting anything, it's the system noticing on its own that nobody
+    did. Closes the gap where a driver never bothers to tap "report",
+    which otherwise left a quiet non-payer invisible to
+    RIDER_NONPAYMENT_AUTO_FLAG_COUNT no matter how long the ride sat.
+    Returns whether it actually escalated anything, so the sweep's own
+    count reflects real action, not just rides it merely looked at."""
+    if ride.payment_status == "paid":
+        return False
+    # PaymentDispute is one shared slot per ride, used by either a rider's
+    # conduct complaint about the driver (rider_statement) or a driver's
+    # non-payment report (driver_statement) — hasattr alone can't tell
+    # them apart, and an unrelated conduct complaint must never silence
+    # this escalation. update_or_create below only ever touches
+    # driver_statement/status, so an existing rider_statement survives.
+    if hasattr(ride, "dispute") and ride.dispute.driver_statement:
+        return False  # already escalated as non-payment, by the driver or an earlier sweep run
+
+    ride.payment_status = "reported"
+    ride.save(update_fields=["payment_status"])
+    dispute, _ = PaymentDispute.objects.update_or_create(
+        ride=ride, defaults={
+            "driver_statement": f"Auto-reported: unpaid for {settings.UNPAID_RIDE_AUTO_DISPUTE_DAYS}+ days.",
+            "status": "open",
+        },
+    )
+    _notify_admin_of_dispute(dispute, "auto-escalated, unpaid too long")
+
+    Notification.objects.filter(user=ride.passenger, is_active=True).delete()
+    Notification.objects.create(
+        user=ride.passenger,
+        message=f"Ride #{ride.id} has been unpaid for several days. Pay it to keep booking.",
+        is_active=True,
+    )
+    notify_notification_count(ride.passenger.id, 1)
+    notify_rider(ride.id, {
+        "type": "ride_update", "event": "payment_reported", "ride_id": ride.id,
+        "message": "This ride has been unpaid for several days. Pay it to keep booking.",
+    })
+
+    _maybe_auto_flag_rider_for_nonpayment(ride.passenger)
+    logger.warning("Ride %s auto-escalated as unpaid too long", ride.id)
+    return True
 
 
 def report_nonpayment(driver: User, ride_id: int, reason: str = "") -> tuple[dict, int]:
@@ -661,7 +784,12 @@ def report_nonpayment(driver: User, ride_id: int, reason: str = "") -> tuple[dic
         return {"status": "error", "error": f"Ride must be completed first (status: {ride.status})"}, 400
     if ride.payment_status == "paid":
         return {"status": "error", "error": "This ride is already paid"}, 400
-    if hasattr(ride, "dispute") and ride.dispute.status == "open":
+    # PaymentDispute is one shared slot per ride, used by either side's
+    # complaint — a rider's conduct report about the driver (rider_statement)
+    # must never block the driver's own, completely separate non-payment
+    # report (driver_statement) from ever being filed. Checked on
+    # driver_statement specifically, not just row existence.
+    if hasattr(ride, "dispute") and ride.dispute.status == "open" and ride.dispute.driver_statement:
         return {"status": "error", "error": "Already reported"}, 400
 
     ride.payment_status = "reported"
@@ -734,7 +862,10 @@ def report_driver(rider: User, ride_id: int, reason: str) -> tuple[dict, int]:
         return {"status": "error", "error": "This ride has no driver to report"}, 400
     if not reason.strip():
         return {"status": "error", "error": "Describe what happened before submitting"}, 400
-    if hasattr(ride, "dispute") and ride.dispute.status == "open":
+    # Same shared-slot caveat as report_nonpayment, other direction — a
+    # driver's non-payment report on this ride must never block the
+    # rider's own, separate conduct complaint from being filed.
+    if hasattr(ride, "dispute") and ride.dispute.status == "open" and ride.dispute.rider_statement:
         return {"status": "error", "error": "Already reported"}, 400
 
     dispute, _ = PaymentDispute.objects.update_or_create(

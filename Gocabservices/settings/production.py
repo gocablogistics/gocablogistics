@@ -12,12 +12,28 @@ CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in PUBLIC_HOSTS]
 CORS_ALLOWED_ORIGINS = [f"https://{h}" for h in PUBLIC_HOSTS] + [
     "http://tauri.localhost",
     "https://tauri.localhost",
+    # Android maps its custom scheme to http(s)://tauri.localhost (the two
+    # entries above) because the older Android WebView can't serve a custom
+    # URI scheme directly — iOS's WKWebView can, so Tauri's iOS build likely
+    # uses the literal "tauri://localhost" origin instead. Added defensively
+    # since this is the very first iOS build and that's unconfirmed.
+    "tauri://localhost",
 ]
 CORS_ALLOW_HEADERS = list(default_headers)
 
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# nginx already redirects HTTP to HTTPS (certbot --redirect), this is
+# defense in depth so Django itself never serves anything over plain HTTP
+# even if that nginx config is ever changed. Safe with the proxy header
+# above already in place, no redirect loop.
+SECURE_SSL_REDIRECT = True
+# Starting conservative (1 hour) rather than the usual year-long
+# recommendation — this domain is a dedicated API host that will only ever
+# be HTTPS, but HSTS is hard to safely undo once browsers cache it, so
+# prove it out at low volume first and raise this once confident.
+SECURE_HSTS_SECONDS = 3600
 
 MIDDLEWARE.insert(1, "django.middleware.gzip.GZipMiddleware")
 

@@ -15,6 +15,7 @@ from django.utils import timezone
 from ..models import RideRequest
 from .driver_trip_service import run_driver_cancel_ride
 from .fraud_checks import UNPAID_PAYMENT_STATUSES
+from .payment_service import auto_escalate_unpaid_ride
 from .push_service import send_push_to_user
 from .ride_events import notify_rider
 
@@ -28,7 +29,7 @@ def _notify_admin_stale(ride: RideRequest, subject_suffix: str, body: str) -> No
     if not settings.ADMIN_NOTIFICATION_EMAIL:
         return
 
-    admin_url = f"{settings.ADMIN_SITE_URL}/admin/gocabapp/riderequest/{ride.id}/change/"
+    admin_url = f"{settings.BASE_URL}/admin/gocabapp/riderequest/{ride.id}/change/"
     try:
         send_branded_email(
             subject=f"GoCab stale ride #{ride.id}, {subject_suffix}",
@@ -170,19 +171,55 @@ def _sweep_unpaid_completed() -> int:
     return count
 
 
+def _sweep_unpaid_too_long() -> int:
+    """Case 5: nobody — not the driver, not an admin — ever escalated this
+    unpaid ride, and the one-time reminder push (case 4 above) clearly
+    didn't get it paid either. After settings.UNPAID_RIDE_AUTO_DISPUTE_DAYS,
+    the system escalates it itself exactly like a driver's own non-payment
+    report would (see payment_service.auto_escalate_unpaid_ride) — no
+    upper bound on how old, unlike the reminder sweep above, since the
+    entire point here is catching rides old enough that nothing else has
+    ever flagged them."""
+    # Not pre-filtered on whether a dispute row already exists here — a
+    # ride can carry an unrelated rider-about-driver conduct complaint in
+    # that same slot, so auto_escalate_unpaid_ride's own check (which
+    # looks at driver_statement specifically, not just row existence) is
+    # the single source of truth for "already escalated."
+    cutoff = timezone.now() - timedelta(days=settings.UNPAID_RIDE_AUTO_DISPUTE_DAYS)
+    unpaid = RideRequest.objects.filter(
+        status="completed",
+        payment_status__in=UNPAID_PAYMENT_STATUSES,
+        completed_at__lte=cutoff,
+    )
+    count = 0
+    for ride in unpaid:
+        try:
+            if auto_escalate_unpaid_ride(ride):
+                count += 1
+        except Exception:
+            # One ride failing to escalate (a DB hiccup, a notification
+            # error) must not abort the rest of the sweep — same principle
+            # as the push-failure guard in _sweep_unpaid_completed above.
+            logger.exception("Auto-escalate failed ride=%s", ride.id)
+    return count
+
+
 def sweep_stale_rides() -> dict:
     """Entry point for the scheduled sweep — see /internal/sweep-stale-rides."""
     unmatched_cancelled = _sweep_unmatched_pending()
     accepted_reverted = _sweep_accepted_timeout()
     started_alerted = _sweep_started_too_long()
     unpaid_reminded = _sweep_unpaid_completed()
+    unpaid_auto_escalated = _sweep_unpaid_too_long()
     logger.info(
-        "Stale-ride sweep: unmatched_cancelled=%s accepted_reverted=%s started_alerted=%s unpaid_reminded=%s",
-        unmatched_cancelled, accepted_reverted, started_alerted, unpaid_reminded,
+        "Stale-ride sweep: unmatched_cancelled=%s accepted_reverted=%s started_alerted=%s "
+        "unpaid_reminded=%s unpaid_auto_escalated=%s",
+        unmatched_cancelled, accepted_reverted, started_alerted, unpaid_reminded, unpaid_auto_escalated,
     )
     return {
         "unmatched_cancelled": unmatched_cancelled,
         "accepted_reverted": accepted_reverted,
         "started_alerted": started_alerted,
         "unpaid_reminded": unpaid_reminded,
+        "unpaid_auto_escalated": unpaid_auto_escalated,
     }

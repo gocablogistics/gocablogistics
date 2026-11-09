@@ -34,7 +34,23 @@ def send_code(email: str) -> None:
     """Generate a 6-digit code, cache its hash (Redis in prod, keyed off the
     email so login and registration share one code), and email it. Consumed
     once by whichever of verify-code/register-rider/register-driver checks
-    it first — there's no separate 'purpose' to track."""
+    it first — there's no separate 'purpose' to track.
+
+    One exception: settings.REVIEWER_EMAIL (if set) always gets a fixed
+    code instead of a random one, and no email is actually sent — app
+    store reviewers can't read a real inbox, so this is the documented
+    login path handed to them in the "Sign in details" form. Scoped to
+    one exact, non-public address; every other email still gets a real
+    random code sent for real."""
+    if settings.REVIEWER_EMAIL and email.lower() == settings.REVIEWER_EMAIL.lower():
+        cache.set(
+            _cache_key(email),
+            {"hash": _hash_code(email, settings.REVIEWER_OTP_CODE), "attempts": 0},
+            timeout=CODE_TTL_SECONDS,
+        )
+        logger.info("Reviewer OTP issued (fixed code, no email sent) for %s", email)
+        return
+
     code = f"{secrets.randbelow(1_000_000):06d}"
     cache.set(
         _cache_key(email),
