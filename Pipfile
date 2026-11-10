@@ -30,4 +30,8 @@ sentry-sdk = {extras = ["django"], version = "*"}
 [dev-packages]
 
 [requires]
-python_version = "3.9"
+# Production actually runs 3.12 (confirmed directly on the server's venv,
+# /srv/gocab/venv/bin/python3.12) — this was stale at 3.9 and would make
+# `pipenv install --deploy` in CI fail on a version mismatch that was
+# never real to begin with.
+python_version = "3.12"

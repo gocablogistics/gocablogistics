@@ -1,0 +1,52 @@
+# .github/workflows/test.yml
+#
+# Runs the full backend test suite on every push and pull request. Uses
+# Gocabservices.settings.test (in-memory SQLite, locmem cache, console
+# email, in-memory channel layer) — no Redis/Postgres service containers
+# needed here, and nothing in this job can ever touch real data.
+name: Backend Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # Matches production (confirmed on the live server) and
+          # Pipfile's [requires] section.
+          python-version: "3.12"
+
+      - name: Install pipenv
+        run: pip install pipenv
+
+      - name: Install dependencies
+        # `sync`, not `install --deploy` — deploy strictly checks
+        # Pipfile.lock's hash against Pipfile, which this Mac has no way
+        # to regenerate/verify locally after editing Pipfile's
+        # [requires] section above. sync installs exactly what's already
+        # locked without that fragile strict-match requirement.
+        run: pipenv sync --dev
+
+      - name: Run tests
+        env:
+          # base.py requires SECRET_KEY to be set at all (os.getenv with no
+          # default) even though settings/test.py doesn't use it for
+          # anything security-sensitive — a throwaway value is fine here.
+          SECRET_KEY: "ci-test-secret-key-not-used-for-anything-real"
+          # utils/distance_utils.py builds a googlemaps.Client at *import*
+          # time, unconditionally — its constructor validates the key
+          # format (must start with "AIza") even though no test here ever
+          # makes a real network call (route_with_coords is mocked
+          # wherever it matters). Without this, test collection itself
+          # fails with ValueError before a single test runs.
+          GOOGLE_MAPS_API_KEY: "AIzaCiPlaceholderKeyNeverUsedForRealCalls0"
+        run: pipenv run python manage.py test gocabapp.tests --settings=Gocabservices.settings.test -v 2
