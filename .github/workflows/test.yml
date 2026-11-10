@@ -1,10 +1,17 @@
 # .github/workflows/test.yml
 #
-# Runs the full backend test suite on every push and pull request. Uses
-# Gocabservices.settings.test (in-memory SQLite, locmem cache, console
-# email, in-memory channel layer) — no Redis/Postgres service containers
-# needed here, and nothing in this job can ever touch real data.
-name: Backend Tests
+# test: runs the full backend test suite on every push and pull request.
+# Uses Gocabservices.settings.test (in-memory SQLite, locmem cache,
+# console email, in-memory channel layer) — no Redis/Postgres service
+# containers needed here, and nothing in this job can ever touch real
+# data.
+#
+# deploy: only on a push to main, and only if `test` passed — syncs the
+# backend to production and restarts it as the dedicated `deploy` user
+# (narrow sudo rule: can restart gocab-backend, nothing else; SSH
+# key-only, no password login). This is the actual gate: a failing test
+# suite physically cannot reach production, not just "shouldn't."
+name: Backend Tests and Deploy
 
 on:
   push:
@@ -50,3 +57,60 @@ jobs:
           # fails with ValueError before a single test runs.
           GOOGLE_MAPS_API_KEY: "AIzaCiPlaceholderKeyNeverUsedForRealCalls0"
         run: pipenv run python manage.py test gocabapp.tests --settings=Gocabservices.settings.test -v 2
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up deploy SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync backend code
+        # --delete only inside gocabapp/ and Gocabservices/ specifically —
+        # confirmed directly on the server that .env, secrets/, venv/,
+        # static/, staticfiles/ all live as siblings of these two
+        # directories, never nested inside them, so --delete here can
+        # never reach any of those regardless of what changes in the repo.
+        run: |
+          RSYNC_SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no"
+          rsync -az --delete -e "$RSYNC_SSH" gocabapp/ deploy@${{ secrets.DEPLOY_HOST }}:/srv/gocab/gocabapp/
+          rsync -az --delete -e "$RSYNC_SSH" Gocabservices/ deploy@${{ secrets.DEPLOY_HOST }}:/srv/gocab/Gocabservices/
+          rsync -az -e "$RSYNC_SSH" manage.py Pipfile Pipfile.lock deploy@${{ secrets.DEPLOY_HOST }}:/srv/gocab/
+
+      - name: Install any new dependencies, migrate, restart
+        # `pipenv requirements`, not `pipenv sync` — sync creates/uses its
+        # own separate virtualenv under pipenv's own management, which is
+        # NOT /srv/gocab/venv, the one gocab-backend.service's ExecStart
+        # actually points to. New dependencies installed that way would
+        # silently never reach the running service. `requirements` only
+        # exports a plain requirements.txt from the (already-synced-to-3.12)
+        # Pipfile.lock — no environment created — which gets piped straight
+        # into that existing venv's own pip.
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no deploy@${{ secrets.DEPLOY_HOST }} '
+            set -e
+            cd /srv/gocab
+            ./venv/bin/pip install --quiet pipenv
+            ./venv/bin/pipenv requirements > /tmp/gocab_requirements.txt
+            ./venv/bin/pip install -r /tmp/gocab_requirements.txt
+            rm /tmp/gocab_requirements.txt
+            ./venv/bin/python manage.py migrate --noinput
+            sudo systemctl restart gocab-backend
+          '
+
+      - name: Verify it is actually up
+        run: |
+          sleep 3
+          status=$(curl -s -o /dev/null -w "%{http_code}" https://api.gocablogistics.com/privacy)
+          echo "Post-deploy health check: $status"
+          if [ "$status" != "200" ]; then
+            echo "Deploy finished but the server isn't responding healthily — check it by hand."
+            exit 1
+          fi
