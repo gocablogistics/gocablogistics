@@ -36,12 +36,17 @@ jobs:
         run: pip install pipenv
 
       - name: Install dependencies
-        # `sync`, not `install --deploy` — deploy strictly checks
-        # Pipfile.lock's hash against Pipfile, which this Mac has no way
-        # to regenerate/verify locally after editing Pipfile's
-        # [requires] section above. sync installs exactly what's already
-        # locked without that fragile strict-match requirement.
-        run: pipenv sync --dev
+        # `install`, not `sync` — sync installs exactly what Pipfile.lock
+        # says, stale per-package environment markers and all. This
+        # lock file was generated back when [requires] said Python 3.9,
+        # so some of those markers don't hold under 3.12 — confirmed for
+        # real: a CI run with `sync` failed with "No module named
+        # 'typing_extensions'" because the lock's marker for it excluded
+        # 3.12, even though Twisted/daphne import it unconditionally
+        # regardless of Python version. `install` detects the lock is out
+        # of date against Pipfile and re-resolves fresh instead of
+        # trusting it blindly.
+        run: pipenv install --dev
 
       - name: Run tests
         env:
@@ -90,14 +95,22 @@ jobs:
         # NOT /srv/gocab/venv, the one gocab-backend.service's ExecStart
         # actually points to. New dependencies installed that way would
         # silently never reach the running service. `requirements` only
-        # exports a plain requirements.txt from the (already-synced-to-3.12)
-        # Pipfile.lock — no environment created — which gets piped straight
-        # into that existing venv's own pip.
+        # exports a plain requirements.txt — no environment created —
+        # which gets piped straight into that existing venv's own pip.
+        # `pipenv lock` runs first to refresh it against the Pipfile that
+        # was just rsynced over, not trust whatever Pipfile.lock shipped
+        # with the repo: a real CI run caught that lock file carrying
+        # stale per-package environment markers from when [requires] said
+        # Python 3.9 (twisted needed typing_extensions regardless of
+        # version; the stale lock's marker said otherwise and it silently
+        # wasn't installed) — re-locking fresh under this venv's actual
+        # 3.12 avoids the same failure here.
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no deploy@${{ secrets.DEPLOY_HOST }} '
             set -e
             cd /srv/gocab
             ./venv/bin/pip install --quiet pipenv
+            ./venv/bin/pipenv lock
             ./venv/bin/pipenv requirements > /tmp/gocab_requirements.txt
             ./venv/bin/pip install -r /tmp/gocab_requirements.txt
             rm /tmp/gocab_requirements.txt
