@@ -4,7 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-django = "*"
+# Pinned, not "*" — confirmed this is what's actually deployed
+# (Pipfile.lock had it locked at this version already). Left unpinned,
+# a fresh resolve (which `pipenv install --dev` does whenever the lock
+# looks stale, e.g. after the python_version fix below) grabs whatever
+# the newest Django is — that's exactly how CI broke: it pulled Django
+# 5.x, which removed CheckConstraint's `check=` kwarg (renamed to
+# `condition=` back in 4.1, gone for real in 5.1) that models.py relies
+# on. Bump this deliberately, together with the CheckConstraint call
+# sites, not by accident via an unpinned resolve.
+django = "==4.2.30"
 dj-database-url = "*"
 psycopg2 = "*"
 channels = {extras = ["daphne"], version = "*"}
