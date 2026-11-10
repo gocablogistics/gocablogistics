@@ -75,7 +75,17 @@ class PayoutSplitTests(TestCase):
 class InstantCashoutTests(TestCase):
     def setUp(self):
         self.driver = _make_driver("5")
-        patcher = patch("gocabapp.services.payout_service.initiate_transfer_for_batch")
+        # Mocks only the actual Paystack network call (_send_transfer), not
+        # the whole initiate_transfer_for_batch — that function's own real
+        # logic (claiming the batch, setting status="processing") must
+        # still run for real, since initiate_instant_cashout's success
+        # path now checks batch.status == "processing" afterward (added
+        # this session: it used to report success unconditionally, even
+        # when the real transfer silently failed to even start). Mocking
+        # the whole function out, like this used to, would make that check
+        # always see the batch's un-advanced default status and 502 —
+        # exactly what broke the first time this ran for real.
+        patcher = patch("gocabapp.services.payout_service._send_transfer", return_value=(True, {}))
         self.mock_transfer = patcher.start()
         self.addCleanup(patcher.stop)
 

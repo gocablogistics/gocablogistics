@@ -7,7 +7,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Avg, Count
 
 from ..models import Notification, Rating, RideRequest
@@ -85,9 +85,15 @@ def submit_rating(rater: User, ride_id: int, stars: int, comment: str = "") -> t
         return {"status": "error", "error": "You can only rate a completed ride"}, 400
 
     try:
-        Rating.objects.create(
-            ride=ride, rater=rater, ratee=ratee, stars=stars, comment=comment.strip()
-        )
+        # Its own atomic() sub-block, not just a bare try/except — on
+        # Postgres (and Django's TestCase, which is how this was actually
+        # found), an IntegrityError caught without one leaves the
+        # enclosing transaction unusable for any further query until a
+        # real rollback happens, not just the Python-level exception.
+        with transaction.atomic():
+            Rating.objects.create(
+                ride=ride, rater=rater, ratee=ratee, stars=stars, comment=comment.strip()
+            )
     except IntegrityError:
         return {"status": "error", "error": "You've already rated this ride"}, 400
 

@@ -202,28 +202,36 @@ def request_ride(request, payload: RequestRideIn):
         payment_method = "online"
 
     try:
-        ride = RideRequest.objects.create(
-            passenger=request.user,
-            current_location=pickup,
-            destination=destination,
-            distance_km=distance_km,
-            duration_min=duration_min,
-            total_fare=total_fare,
-            # The surge in effect when this ride was actually priced — kept
-            # separate from total_fare, which may instead reflect a locked
-            # earlier quote (see resolve_fare above). Was never being saved
-            # at all before this; silently stuck at the model default (1.0)
-            # regardless of the real fare.
-            surge_multiplier=fare["surge_multiplier"],
-            status="pending",
-            pickup_latitude=pickup_coords["lat"] if pickup_coords else None,
-            pickup_longitude=pickup_coords["lng"] if pickup_coords else None,
-            destination_latitude=dest_coords["lat"] if dest_coords else None,
-            destination_longitude=dest_coords["lng"] if dest_coords else None,
-            recipient_phone_number=recipient_phone,
-            payment_method=payment_method,
-            vehicle_type=payload.vehicle_type,
-        )
+        # Own atomic() sub-block — an IntegrityError caught without one
+        # leaves any enclosing transaction unusable for further queries
+        # until a real rollback, not just the Python-level exception
+        # (found via rating_service hitting exactly this under Django's
+        # TestCase, which wraps each test in an outer atomic transaction;
+        # the same would happen here under any future caller/ATOMIC_REQUESTS
+        # context, not just in tests).
+        with transaction.atomic():
+            ride = RideRequest.objects.create(
+                passenger=request.user,
+                current_location=pickup,
+                destination=destination,
+                distance_km=distance_km,
+                duration_min=duration_min,
+                total_fare=total_fare,
+                # The surge in effect when this ride was actually priced — kept
+                # separate from total_fare, which may instead reflect a locked
+                # earlier quote (see resolve_fare above). Was never being saved
+                # at all before this; silently stuck at the model default (1.0)
+                # regardless of the real fare.
+                surge_multiplier=fare["surge_multiplier"],
+                status="pending",
+                pickup_latitude=pickup_coords["lat"] if pickup_coords else None,
+                pickup_longitude=pickup_coords["lng"] if pickup_coords else None,
+                destination_latitude=dest_coords["lat"] if dest_coords else None,
+                destination_longitude=dest_coords["lng"] if dest_coords else None,
+                recipient_phone_number=recipient_phone,
+                payment_method=payment_method,
+                vehicle_type=payload.vehicle_type,
+            )
     except IntegrityError:
         # The check above has a small race window (two near-simultaneous
         # requests can both pass it before either row exists) — the DB's
@@ -926,10 +934,15 @@ def update_bank_details(request, payload: UpdateBankDetailsIn):
     driver.paystack_bank_code = payload.bank_code
     driver.paystack_recipient_code = ""  # force a fresh Paystack recipient against the new details
     try:
-        driver.save(update_fields=[
-            "bank_name", "account_number", "account_holder_name",
-            "paystack_bank_code", "paystack_recipient_code",
-        ])
+        # Own atomic() sub-block — same reasoning as request_ride's
+        # IntegrityError guard above: catching it without one leaves any
+        # enclosing transaction unusable for further queries, not just the
+        # Python-level exception.
+        with transaction.atomic():
+            driver.save(update_fields=[
+                "bank_name", "account_number", "account_holder_name",
+                "paystack_bank_code", "paystack_recipient_code",
+            ])
     except IntegrityError:
         # Same small race window as request_ride's IntegrityError guard
         # above — the .exists() check a few lines up can't fully close it
