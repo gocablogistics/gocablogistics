@@ -355,11 +355,22 @@ def active_ride(request):
 RIDE_HISTORY_LIMIT = 100
 
 
+def _dispute_fields(ride: RideRequest, statement_attr: str) -> tuple[Optional[str], bool]:
+    """dispute_status / my_statement_submitted for RideHistoryOut — scoped
+    to whichever side is asking (statement_attr is "rider_statement" for
+    the rider's own history, "driver_statement" for the driver's), so
+    "have I already responded" never leaks the other side's answer."""
+    if not hasattr(ride, "dispute"):
+        return None, False
+    dispute = ride.dispute
+    return dispute.status, bool(getattr(dispute, statement_attr))
+
+
 @router.get("/history", response=list[RideHistoryOut], auth=JWTAuth())
 def ride_history(request):
     rides = (
         RideRequest.objects.filter(passenger=request.user)
-        .select_related("driver__driver")
+        .select_related("driver__driver", "dispute")
         .exclude(status__in=["pending", "accepted", "started"])
         .order_by("-requested_at")[:RIDE_HISTORY_LIMIT]
     )
@@ -368,8 +379,10 @@ def ride_history(request):
         Rating.objects.filter(rater=request.user, ride_id__in=[r.id for r in rides])
         .values_list("ride_id", flat=True)
     )
-    return [
-        {
+    result = []
+    for r in rides:
+        dispute_status, my_statement_submitted = _dispute_fields(r, "rider_statement")
+        result.append({
             "ride_id": r.id,
             "current_location": r.current_location,
             "destination": r.destination,
@@ -381,12 +394,13 @@ def ride_history(request):
             "requested_at": r.requested_at,
             "completed_at": r.completed_at,
             "other_party_name": display_name(r.driver, "driver", "Driver") if r.driver_id else None,
+            "dispute_status": dispute_status,
+            "my_statement_submitted": my_statement_submitted,
             "my_rating_submitted": r.id in rated_ride_ids,
             "paid_at": r.paid_at,
             "payment_reference": r.payment_reference,
-        }
-        for r in rides
-    ]
+        })
+    return result
 
 
 @router.get("/driver/history", response=list[RideHistoryOut], auth=JWTAuth())
@@ -395,6 +409,7 @@ def driver_ride_history(request):
         raise HttpError(403, "Driver profile not found")
     rides = (
         RideRequest.objects.filter(driver=request.user)
+        .select_related("dispute")
         .exclude(status__in=["pending", "accepted", "started"])
         .order_by("-requested_at")[:RIDE_HISTORY_LIMIT]
     )
@@ -403,8 +418,10 @@ def driver_ride_history(request):
         Rating.objects.filter(rater=request.user, ride_id__in=[r.id for r in rides])
         .values_list("ride_id", flat=True)
     )
-    return [
-        {
+    result = []
+    for r in rides:
+        dispute_status, my_statement_submitted = _dispute_fields(r, "driver_statement")
+        result.append({
             "ride_id": r.id,
             "current_location": r.current_location,
             "destination": r.destination,
@@ -416,10 +433,11 @@ def driver_ride_history(request):
             "requested_at": r.requested_at,
             "completed_at": r.completed_at,
             "other_party_name": _passenger_name(r.passenger),
+            "dispute_status": dispute_status,
+            "my_statement_submitted": my_statement_submitted,
             "my_rating_submitted": r.id in rated_ride_ids,
-        }
-        for r in rides
-    ]
+        })
+    return result
 
 
 @router.get("/{ride_id}/messages", response=list[RideMessageOut], auth=JWTAuth())
