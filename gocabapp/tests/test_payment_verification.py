@@ -18,7 +18,7 @@ from django.test import TestCase, override_settings
 
 from gocabapp.models import Driver, DriverPayout, RideRequest
 from gocabapp.services.payment_service import (
-    _apply_verified_online_payment,
+    apply_verified_online_payment,
     handle_paystack_webhook,
     verify_paystack_signature,
 )
@@ -71,7 +71,7 @@ def _make_paid_ride(total_fare, wallet_credit=0, reference="RIDE_1_REF") -> Ride
 class ApplyVerifiedOnlinePaymentTests(TestCase):
     def test_correct_amount_marks_the_ride_paid_and_creates_a_payout(self):
         ride = _make_paid_ride(total_fare=1000)
-        result = _apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=100_000)
+        result = apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=100_000)
         self.assertTrue(result)
         ride.refresh_from_db()
         self.assertEqual(ride.payment_status, "paid")
@@ -82,7 +82,7 @@ class ApplyVerifiedOnlinePaymentTests(TestCase):
         cheaper, genuinely-paid reference can't be replayed to mark a
         more expensive ride as paid."""
         ride = _make_paid_ride(total_fare=5000)
-        result = _apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=100_000)  # only ₦1000 paid
+        result = apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=100_000)  # only ₦1000 paid
         self.assertFalse(result)
         ride.refresh_from_db()
         self.assertEqual(ride.payment_status, "pending")
@@ -93,12 +93,12 @@ class ApplyVerifiedOnlinePaymentTests(TestCase):
         charged ₦800 through Paystack — the expected amount must reflect
         that discount, not the full fare."""
         ride = _make_paid_ride(total_fare=1000, wallet_credit=200)
-        underpaid_as_if_full_fare = _apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=100_000)
+        underpaid_as_if_full_fare = apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=100_000)
         self.assertFalse(underpaid_as_if_full_fare)
         ride.refresh_from_db()
         self.assertEqual(ride.payment_status, "pending")
 
-        correctly_discounted = _apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=80_000)
+        correctly_discounted = apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=80_000)
         self.assertTrue(correctly_discounted)
         ride.refresh_from_db()
         self.assertEqual(ride.payment_status, "paid")
@@ -107,9 +107,9 @@ class ApplyVerifiedOnlinePaymentTests(TestCase):
         """Idempotency — a webhook retry or a race between the webhook
         and the browser callback must not double-pay a driver."""
         ride = _make_paid_ride(total_fare=1000)
-        _apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=100_000)
+        apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=100_000)
         ride.refresh_from_db()
-        second_call_result = _apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=100_000)
+        second_call_result = apply_verified_online_payment(ride, "RIDE_1_REF", amount_kobo=100_000)
         self.assertTrue(second_call_result)  # documented as a safe no-op, not a failure
         self.assertEqual(DriverPayout.objects.filter(ride=ride).count(), 1)
 

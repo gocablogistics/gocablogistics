@@ -1,4 +1,4 @@
-"""Tests against the documented rules in payment_service._maybe_credit_referral_reward
+"""Tests against the documented rules in payment_service.maybe_credit_referral_reward
 and Rider.referral_reward_credited: the first paid ride of a referred
 rider credits settings.REFERRAL_REWARD_AMOUNT to whoever referred them,
 exactly once per referred rider — no matter how many of their rides get
@@ -11,8 +11,8 @@ from django.test import TestCase, override_settings
 
 from gocabapp.models import RideRequest, Rider
 from gocabapp.services.payment_service import (
-    _apply_verified_online_payment,
-    _maybe_credit_referral_reward,
+    apply_verified_online_payment,
+    maybe_credit_referral_reward,
     confirm_cash_payment,
     initiate_cash_payment,
 )
@@ -36,7 +36,7 @@ class MaybeCreditReferralRewardTests(TestCase):
         referrer = _make_rider("1")
         referred = _make_rider("2", referred_by=referrer)
         ride = _make_paid_ride(referred)
-        _maybe_credit_referral_reward(ride)
+        maybe_credit_referral_reward(ride)
         referrer.refresh_from_db()
         self.assertEqual(referrer.wallet_credit_balance, Decimal("500.00"))
         referred.refresh_from_db()
@@ -45,8 +45,8 @@ class MaybeCreditReferralRewardTests(TestCase):
     def test_does_not_credit_again_on_a_second_paid_ride(self):
         referrer = _make_rider("3")
         referred = _make_rider("4", referred_by=referrer)
-        _maybe_credit_referral_reward(_make_paid_ride(referred))
-        _maybe_credit_referral_reward(_make_paid_ride(referred))
+        maybe_credit_referral_reward(_make_paid_ride(referred))
+        maybe_credit_referral_reward(_make_paid_ride(referred))
         referrer.refresh_from_db()
         self.assertEqual(referrer.wallet_credit_balance, Decimal("500.00"))  # not 1000
 
@@ -54,14 +54,14 @@ class MaybeCreditReferralRewardTests(TestCase):
         referrer = _make_rider("5")
         referred = _make_rider("6", referred_by=referrer)
         ride = _make_paid_ride(referred)
-        _maybe_credit_referral_reward(ride)
-        _maybe_credit_referral_reward(ride)
+        maybe_credit_referral_reward(ride)
+        maybe_credit_referral_reward(ride)
         referrer.refresh_from_db()
         self.assertEqual(referrer.wallet_credit_balance, Decimal("500.00"))
 
     def test_a_rider_with_no_referrer_credits_nobody(self):
         referred = _make_rider("7", referred_by=None)
-        _maybe_credit_referral_reward(_make_paid_ride(referred))
+        maybe_credit_referral_reward(_make_paid_ride(referred))
         referred.refresh_from_db()
         self.assertFalse(referred.referral_reward_credited)
 
@@ -71,7 +71,7 @@ class MaybeCreditReferralRewardTests(TestCase):
         this must never fire for them regardless of how many rides they
         pay for themselves."""
         referrer = _make_rider("8")
-        _maybe_credit_referral_reward(_make_paid_ride(referrer))
+        maybe_credit_referral_reward(_make_paid_ride(referrer))
         referrer.refresh_from_db()
         self.assertEqual(referrer.wallet_credit_balance, Decimal("0"))
 
@@ -84,7 +84,7 @@ class ReferralRewardWiredIntoRealPaymentFlowsTests(TestCase):
         ride = _make_paid_ride(referred)
         ride.payment_reference = "REF_ONLINE"
         ride.save(update_fields=["payment_reference"])
-        result = _apply_verified_online_payment(ride, "REF_ONLINE", amount_kobo=100_000)
+        result = apply_verified_online_payment(ride, "REF_ONLINE", amount_kobo=100_000)
         self.assertTrue(result)
         referrer.refresh_from_db()
         self.assertEqual(referrer.wallet_credit_balance, Decimal("500.00"))

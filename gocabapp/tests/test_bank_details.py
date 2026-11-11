@@ -9,6 +9,7 @@ own network calls mocked out.
 """
 import datetime
 import json
+import re
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -40,15 +41,15 @@ def _auth_header(driver: Driver) -> dict:
 
 
 def _real_code(email: str) -> str:
-    """Same brute-force-the-stored-hash trick as test_otp.py — send_code
-    never returns the code, only emails it."""
+    """Pulls the code out of the actual email sent, same as test_otp.py —
+    send_code never returns the code, only emails it, and reading the
+    real outbox keeps this independent of otp.py's internal storage."""
     otp.send_code(email)
-    entry = cache.get(otp._cache_key(email))
-    for guess in range(1_000_000):
-        code = f"{guess:06d}"
-        if otp._hash_code(email, code) == entry["hash"]:
-            return code
-    raise AssertionError("could not recover the sent code")
+    body = mail.outbox[-1].body
+    match = re.search(r"\b\d{6}\b", body)
+    if not match:
+        raise AssertionError(f"no 6-digit code found in sent email body: {body!r}")
+    return match.group()
 
 
 class UpdateBankDetailsTests(TestCase):

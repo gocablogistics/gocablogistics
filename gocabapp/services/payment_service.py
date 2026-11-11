@@ -134,7 +134,7 @@ def _auto_resolve_nonpayment_dispute(ride: RideRequest) -> None:
         logger.info("Auto-resolved non-payment dispute(s) for ride=%s", ride.id)
 
 
-def _apply_verified_online_payment(ride: RideRequest, reference: str, amount_kobo: int) -> bool:
+def apply_verified_online_payment(ride: RideRequest, reference: str, amount_kobo: int) -> bool:
     """Marks a ride paid from a Paystack-confirmed transaction — used by
     both the browser callback and the webhook, so both paths enforce the
     exact same checks. Returns False (and marks nothing) if the amount
@@ -174,7 +174,7 @@ def _apply_verified_online_payment(ride: RideRequest, reference: str, amount_kob
         _notify_payment_completed(ride)
         _auto_resolve_nonpayment_dispute(ride)
         create_payout_for_ride(ride)
-        _maybe_credit_referral_reward(ride)
+        maybe_credit_referral_reward(ride)
     return True
 
 
@@ -215,7 +215,7 @@ def _apply_wallet_only_payment(ride: RideRequest, credit_amount: Decimal) -> boo
     """Marks a ride paid entirely from wallet credit, with no Paystack
     transaction at all — used when a rider's credit balance fully covers
     the fare (see initiate_checkout_for_ride). Same idempotency guard as
-    _apply_verified_online_payment."""
+    apply_verified_online_payment."""
     applied = False
     with transaction.atomic():
         locked = RideRequest.objects.select_for_update().get(id=ride.id)
@@ -234,11 +234,11 @@ def _apply_wallet_only_payment(ride: RideRequest, credit_amount: Decimal) -> boo
         _notify_payment_completed(ride)
         _auto_resolve_nonpayment_dispute(ride)
         create_payout_for_ride(ride)
-        _maybe_credit_referral_reward(ride)
+        maybe_credit_referral_reward(ride)
     return applied
 
 
-def _maybe_credit_referral_reward(ride: RideRequest) -> None:
+def maybe_credit_referral_reward(ride: RideRequest) -> None:
     """First-paid-ride referral bonus (settings.REFERRAL_REWARD_AMOUNT) —
     called after any ride of the referred rider's is confirmed paid, online,
     wallet-credit, or cash. Rider.referral_reward_credited guards this to
@@ -317,7 +317,7 @@ def handle_paystack_webhook(event: dict) -> None:
         # twice, or a slow network) arrives with a reference the ride no
         # longer remembers. The ride id we put in the checkout metadata is
         # signed by Paystack's webhook signature, so it's safe to use —
-        # and the amount check in _apply_verified_online_payment still
+        # and the amount check in apply_verified_online_payment still
         # decides whether the ride really gets marked paid.
         ride = None
         ride_id = (data.get("metadata") or {}).get("ride_id")
@@ -331,8 +331,8 @@ def handle_paystack_webhook(event: dict) -> None:
             ride.id, reference,
         )
 
-    _record_and_check_payment_instrument(ride, data)
-    _apply_verified_online_payment(ride, reference, amount)
+    record_and_check_payment_instrument(ride, data)
+    apply_verified_online_payment(ride, reference, amount)
 
 
 def _notify_payment_completed(ride: RideRequest) -> None:
@@ -461,7 +461,7 @@ def handle_payment_callback(ride_id: int, query_params) -> str:
             return f"{fail}&error=paystack_{paystack_status}"
 
         amount = data.get("data", {}).get("amount")
-        if not _apply_verified_online_payment(ride, reference, amount):
+        if not apply_verified_online_payment(ride, reference, amount):
             return f"{fail}&error=amount_mismatch"
 
         ride.refresh_from_db()
@@ -572,7 +572,7 @@ def confirm_cash_payment(driver: User, ride_id: int, code: str) -> tuple[dict, i
     _notify_payment_completed(ride)
     _auto_resolve_nonpayment_dispute(ride)
     charge_cash_commission(ride)
-    _maybe_credit_referral_reward(ride)
+    maybe_credit_referral_reward(ride)
     logger.info("Cash payment confirmed ride_id=%s", ride.id)
     return {"status": "success", "message": "Cash payment confirmed", "ride_id": ride.id}, 200
 
@@ -669,7 +669,7 @@ def _maybe_auto_flag_rider_for_nonpayment(rider_user: User) -> None:
     logger.warning("Rider auto-flagged for repeat non-payment: user_id=%s count=%s", rider_user.id, report_count)
 
 
-def _fingerprint_from_webhook_data(data: dict) -> str | None:
+def fingerprint_from_webhook_data(data: dict) -> str | None:
     """Derived from the card itself (bin+last4) — never the full card
     number, which Paystack never actually gives GoCab anyway. Falls back
     to Paystack's authorization_code if bin/last4 aren't present. Bank
@@ -687,20 +687,20 @@ def _fingerprint_from_webhook_data(data: dict) -> str | None:
     return None
 
 
-def _record_and_check_payment_instrument(ride: RideRequest, data: dict) -> None:
+def record_and_check_payment_instrument(ride: RideRequest, data: dict) -> None:
     """Logs the card this payment attempt used against the paying rider,
     and checks whether that same card has already been seen on a
     DIFFERENT, already-flagged rider. If so, this is almost certainly the
     same real person evading a block with a fresh account, so this account
     gets flagged too instead of waiting for its own history of reports to
     build back up. Deliberately runs regardless of whether this specific
-    charge's amount matches _apply_verified_online_payment's check — a
+    charge's amount matches apply_verified_online_payment's check — a
     rejected charge still proves the card was genuinely used."""
     try:
         rider = ride.passenger.rider
     except Rider.DoesNotExist:
         return
-    fingerprint = _fingerprint_from_webhook_data(data)
+    fingerprint = fingerprint_from_webhook_data(data)
     if not fingerprint:
         return
 

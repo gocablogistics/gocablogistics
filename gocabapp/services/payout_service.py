@@ -367,7 +367,7 @@ def create_payout_for_ride(ride: RideRequest) -> DriverPayout | None:
     except IntegrityError:
         # A DriverPayout already exists for this ride — the OneToOneField
         # is exactly the guard for a duplicate webhook delivery racing the
-        # first one past the payment_status check in _apply_verified_online_payment.
+        # first one past the payment_status check in apply_verified_online_payment.
         logger.info("Payout already exists for ride=%s, skipping", ride.id)
         return None
 

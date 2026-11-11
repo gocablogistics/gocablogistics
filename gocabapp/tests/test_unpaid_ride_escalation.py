@@ -1,8 +1,9 @@
 """Tests against the documented rules in payment_service.auto_escalate_unpaid_ride
-and stale_ride_service._sweep_unpaid_too_long: a completed ride that sits
-unpaid for settings.UNPAID_RIDE_AUTO_DISPUTE_DAYS gets escalated by the
-system itself, exactly like a driver's own non-payment report, closing
-the gap where nobody ever bothers to tap "report"."""
+and the /internal/sweep-stale-rides endpoint it's wired into via
+stale_ride_service: a completed ride that sits unpaid for
+settings.UNPAID_RIDE_AUTO_DISPUTE_DAYS gets escalated by the system
+itself, exactly like a driver's own non-payment report, closing the
+gap where nobody ever bothers to tap "report"."""
 import datetime
 from decimal import Decimal
 
@@ -12,7 +13,6 @@ from django.utils import timezone
 
 from gocabapp.models import PaymentDispute, RideRequest, Rider
 from gocabapp.services.payment_service import auto_escalate_unpaid_ride
-from gocabapp.services.stale_ride_service import _sweep_unpaid_too_long
 
 
 def _make_rider(suffix: str) -> Rider:
@@ -85,13 +85,28 @@ class AutoEscalateUnpaidRideTests(TestCase):
         self.assertTrue(rider.is_flagged)
 
 
+@override_settings(STALE_SWEEP_SECRET="test-sweep-secret")
 class SweepUnpaidTooLongTests(TestCase):
+    """Goes through the real /internal/sweep-stale-rides endpoint, the
+    actual server-to-server contract a scheduled job hits (see
+    api/main.py) — not the private _sweep_unpaid_too_long helper behind
+    it, so this keeps testing the real behavior no matter how
+    stale_ride_service composes its five sweeps internally."""
+
+    def _sweep(self) -> int:
+        response = self.client.post(
+            "/api/v1/internal/sweep-stale-rides",
+            HTTP_X_SWEEP_SECRET="test-sweep-secret",
+        )
+        self.assertEqual(response.status_code, 200)
+        return response.json()["unpaid_auto_escalated"]
+
     @override_settings(UNPAID_RIDE_AUTO_DISPUTE_DAYS=3)
     def test_escalates_rides_past_the_cutoff(self):
         rider = _make_rider("5")
         old_enough = timezone.now() - datetime.timedelta(days=4)
         ride = _make_unpaid_ride(rider, completed_at=old_enough)
-        count = _sweep_unpaid_too_long()
+        count = self._sweep()
         self.assertEqual(count, 1)
         ride.refresh_from_db()
         self.assertEqual(ride.payment_status, "reported")
@@ -101,7 +116,7 @@ class SweepUnpaidTooLongTests(TestCase):
         rider = _make_rider("6")
         too_recent = timezone.now() - datetime.timedelta(days=1)
         ride = _make_unpaid_ride(rider, completed_at=too_recent)
-        count = _sweep_unpaid_too_long()
+        count = self._sweep()
         self.assertEqual(count, 0)
         ride.refresh_from_db()
         self.assertEqual(ride.payment_status, "pending")
@@ -112,7 +127,7 @@ class SweepUnpaidTooLongTests(TestCase):
         old_enough = timezone.now() - datetime.timedelta(days=10)
         ride = _make_unpaid_ride(rider, completed_at=old_enough, payment_status="reported")
         PaymentDispute.objects.create(ride=ride, status="open", driver_statement="driver reported it")
-        count = _sweep_unpaid_too_long()
+        count = self._sweep()
         self.assertEqual(count, 0)
 
     @override_settings(UNPAID_RIDE_AUTO_DISPUTE_DAYS=3)
@@ -120,5 +135,16 @@ class SweepUnpaidTooLongTests(TestCase):
         rider = _make_rider("8")
         old_enough = timezone.now() - datetime.timedelta(days=10)
         _make_unpaid_ride(rider, completed_at=old_enough, payment_status="paid")
-        count = _sweep_unpaid_too_long()
+        count = self._sweep()
         self.assertEqual(count, 0)
+
+    def test_wrong_or_missing_secret_is_rejected(self):
+        """The endpoint's whole security model: no JWT/user here, so an
+        unset or mismatched secret must always 401, never silently run."""
+        response = self.client.post("/api/v1/internal/sweep-stale-rides")
+        self.assertEqual(response.status_code, 401)
+        response = self.client.post(
+            "/api/v1/internal/sweep-stale-rides",
+            HTTP_X_SWEEP_SECRET="wrong-secret",
+        )
+        self.assertEqual(response.status_code, 401)

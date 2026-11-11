@@ -832,7 +832,7 @@ class CashDebtEntryAdmin(admin.ModelAdmin):
 @admin.register(RiderPaymentInstrument)
 class RiderPaymentInstrumentAdmin(admin.ModelAdmin):
     """Read-only log — rows are created automatically by
-    payment_service._record_and_check_payment_instrument. Lets an admin
+    payment_service.record_and_check_payment_instrument. Lets an admin
     see which cards a flagged rider has used (and which other riders
     share one, i.e. evasion via a new account), and delete a row here if
     a card gets reassigned to a genuinely different, innocent person."""

@@ -48,7 +48,7 @@ class Rider(models.Model):
     is_flagged = models.BooleanField(default=False)
     flagged_reason = models.TextField(blank=True, default="")
     # Referral program (see settings.REFERRAL_REWARD_AMOUNT and
-    # services/payment_service._maybe_credit_referral_reward). Every rider
+    # services/payment_service.maybe_credit_referral_reward). Every rider
     # gets a code the moment their account is created (see save() below) —
     # generated up front rather than lazily so it's always ready to
     # show/share from the very first login.
@@ -352,7 +352,7 @@ class RideRequest(models.Model):
     # Paystack charge (or, if this covers the fare entirely, the wallet-only
     # payment) is for total_fare minus this. Only actually deducted from the
     # rider's live balance once payment is confirmed (see
-    # _apply_verified_online_payment); kept afterwards purely as a record
+    # apply_verified_online_payment); kept afterwards purely as a record
     # for display ("₦200 wallet credit applied").
     wallet_credit_applied = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     # Set the first time the stale-ride sweep (services/stale_ride_service.py)
@@ -627,8 +627,8 @@ class RiderPaymentInstrument(models.Model):
     """One row per (rider, card) pair ever seen on a real Paystack charge
     attempt — a rider flagged for non-payment who abandons that account and
     signs up fresh can still be caught if the new account pays with the
-    same card. See payment_service._fingerprint_from_webhook_data /
-    _record_and_check_payment_instrument.
+    same card. See payment_service.fingerprint_from_webhook_data /
+    record_and_check_payment_instrument.
 
     fingerprint is derived from the card's bin+last4 (or, failing that,
     Paystack's authorization_code) — never the full card number, which

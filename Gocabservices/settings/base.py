@@ -270,7 +270,7 @@ NO_DRIVERS_MESSAGE_MINUTES = int(os.getenv("NO_DRIVERS_MESSAGE_MINUTES", "45"))
 # matches Support.tsx's own TODO on SUPPORT_EMAIL.
 SUPPORT_PHONE_NUMBER = os.getenv("SUPPORT_PHONE_NUMBER", "+2340000000000")
 
-# Referral program (services/payment_service._maybe_credit_referral_reward):
+# Referral program (services/payment_service.maybe_credit_referral_reward):
 # one-sided — only the existing rider who referred someone gets rewarded,
 # and only once that new rider's first ride is actually PAID (not just
 # booked), which is what stops someone farming throwaway signups for free

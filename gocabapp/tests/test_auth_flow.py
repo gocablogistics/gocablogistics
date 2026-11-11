@@ -7,8 +7,10 @@ silently log the user out. See services.py's own docstring on
 rotate_refresh_token for the full story.
 """
 import json
+import re
 
 from django.contrib.auth.models import User
+from django.core import mail
 from django.core.cache import cache
 from django.test import TestCase
 from ninja_jwt.tokens import RefreshToken
@@ -18,13 +20,16 @@ from gocabapp.models import Driver, Rider
 
 
 def _real_code(email: str) -> str:
+    """Pulls the code out of the actual email sent, the same way a real
+    rider reads it off their inbox — not out of otp.py's cache/hash
+    internals, so this stays true regardless of how otp.py stores codes
+    server-side."""
     otp.send_code(email)
-    entry = cache.get(otp._cache_key(email))
-    for guess in range(1_000_000):
-        code = f"{guess:06d}"
-        if otp._hash_code(email, code) == entry["hash"]:
-            return code
-    raise AssertionError("could not recover the sent code")
+    body = mail.outbox[-1].body
+    match = re.search(r"\b\d{6}\b", body)
+    if not match:
+        raise AssertionError(f"no 6-digit code found in sent email body: {body!r}")
+    return match.group()
 
 
 def _make_rider(suffix: str) -> Rider:

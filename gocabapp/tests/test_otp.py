@@ -1,6 +1,9 @@
 """Tests against the stated one-time-code rules in otp.py's own
 docstrings/comments: a code works exactly once, a wrong guess doesn't
 burn the real code, and too many wrong guesses locks it out entirely."""
+import re
+
+from django.core import mail
 from django.core.cache import cache
 from django.test import SimpleTestCase
 from ninja.errors import HttpError
@@ -13,17 +16,18 @@ class OtpTests(SimpleTestCase):
         cache.clear()
 
     def _sent_code(self, email: str) -> str:
-        """send_code only emails the code, it never returns it — pull the
-        real code back out of the cache the same way verify_code checks
-        it, by brute-forcing against the stored hash. Fine for a test;
-        otp.py's own comment confirms this isn't meant to resist that."""
+        """send_code only emails the code, it never returns it — pull it
+        out of the actual email that was sent, the same way a real rider
+        would read it off their inbox. Deliberately not reaching into
+        otp.py's cache/hash internals: this way the test only depends on
+        the real, user-visible contract (a 6-digit code arrives by
+        email), not on how the code happens to be stored server-side."""
         otp.send_code(email)
-        entry = cache.get(otp._cache_key(email))
-        for guess in range(1_000_000):
-            code = f"{guess:06d}"
-            if otp._hash_code(email, code) == entry["hash"]:
-                return code
-        raise AssertionError("could not recover the sent code")
+        body = mail.outbox[-1].body
+        match = re.search(r"\b\d{6}\b", body)
+        if not match:
+            raise AssertionError(f"no 6-digit code found in sent email body: {body!r}")
+        return match.group()
 
     def test_correct_code_verifies(self):
         code = self._sent_code("rider@example.com")

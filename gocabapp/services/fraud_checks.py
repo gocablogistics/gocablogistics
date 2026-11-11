@@ -56,7 +56,7 @@ def has_disputed_unpaid_ride(user: User) -> bool:
 # rider genuinely hasn't had a confirmed payment recorded yet, exactly like
 # a plain unpaid ride, so it's held the same way — and paying it for real
 # is what actually resolves the report (see payment_service's
-# _apply_verified_online_payment / confirm_cash_payment), no admin needed
+# apply_verified_online_payment / confirm_cash_payment), no admin needed
 # unless the rider disputes the report itself. Deliberately NOT "disputed" —
 # that state means an admin already reviewed and is actively adjudicating,
 # which is a different, human-in-the-loop situation on purpose.
