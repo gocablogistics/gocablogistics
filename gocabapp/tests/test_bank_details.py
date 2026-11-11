@@ -14,7 +14,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from ninja_jwt.tokens import RefreshToken
 
 from gocabapp.api.auth import otp
@@ -110,6 +110,7 @@ class UpdateBankDetailsTests(TestCase):
         self.assertEqual(driver.account_number, "9988776655")
         self.assertEqual(driver.account_holder_name, "Driver C")
 
+    @override_settings(ADMIN_NOTIFICATION_EMAIL="admin@example.com")
     def test_admin_gets_alerted_on_a_successful_change(self):
         driver = _make_driver("D")
         code = _real_code(driver.user.email)
