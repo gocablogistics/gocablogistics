@@ -36,17 +36,23 @@ jobs:
         run: pip install pipenv
 
       - name: Install dependencies
-        # `install`, not `sync` — sync installs exactly what Pipfile.lock
-        # says, stale per-package environment markers and all. This
-        # lock file was generated back when [requires] said Python 3.9,
-        # so some of those markers don't hold under 3.12 — confirmed for
-        # real: a CI run with `sync` failed with "No module named
-        # 'typing_extensions'" because the lock's marker for it excluded
-        # 3.12, even though Twisted/daphne import it unconditionally
-        # regardless of Python version. `install` detects the lock is out
-        # of date against Pipfile and re-resolves fresh instead of
-        # trusting it blindly.
-        run: pipenv install --dev
+        # `sync`, not `install` — sync installs exactly the hashes pinned
+        # in Pipfile.lock, no resolution step at all. We were on `install`
+        # before because the lock was stale (generated back when
+        # [requires] said Python 3.9, so its typing_extensions marker
+        # excluded 3.12 even though Twisted/daphne need it regardless of
+        # version) — `install` re-resolves fresh to route around that.
+        # But a fresh resolve ignores Pipfile.lock's pin and can grab a
+        # different version of anything left unpinned in Pipfile: that's
+        # exactly how django = "*" silently became Django 6.x one run,
+        # which dropped CheckConstraint's `check=` kwarg (renamed to
+        # `condition=` in 5.1, removed in 6.0) that the Rating model
+        # uses. The lock has since been regenerated fresh under 3.12
+        # (confirmed: typing_extensions' marker is now
+        # python_version >= "3.9", no longer 3.9-only) and Django is
+        # pinned in Pipfile too, so `sync` is safe again and removes the
+        # drift risk `install` reintroduced.
+        run: pipenv sync --dev
 
       - name: Run tests
         env:
