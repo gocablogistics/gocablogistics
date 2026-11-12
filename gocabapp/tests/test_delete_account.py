@@ -25,12 +25,14 @@ def _make_driver(suffix: str, **extra) -> Driver:
     user = User.objects.create_user(
         username=f"deldriver{suffix}", email=f"deldriver{suffix}@example.com",
     )
+    extra.setdefault("vehicle_type", "Bike")
+    extra.setdefault("is_approved", True)
     return Driver.objects.create(
         user=user, full_name=f"Driver {suffix}", phone_number=f"+23471900000{suffix}",
-        date_of_birth=datetime.date(1995, 1, 1), vehicle_type="Bike",
+        date_of_birth=datetime.date(1995, 1, 1),
         national_identification_number=f"DELNIN{suffix}", bank_name="Test Bank",
         account_number=f"555005{suffix}0", account_holder_name=f"Driver {suffix}",
-        is_approved=True, **extra,
+        **extra,
     )
 
 

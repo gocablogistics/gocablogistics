@@ -19,12 +19,16 @@ def _make_rider(suffix: str) -> Rider:
 
 def _make_driver(suffix: str, **extra) -> Driver:
     user = User.objects.create_user(username=f"activedriver{suffix}", email=f"activedriver{suffix}@example.com")
+    extra.setdefault("vehicle_type", "Bike")
+    extra.setdefault("is_approved", True)
+    extra.setdefault("vehicle_model", "Honda")
+    extra.setdefault("license_plate", "ABC-123")
     return Driver.objects.create(
         user=user, full_name=f"Driver {suffix}", phone_number=f"+23479000000{suffix}",
-        date_of_birth=datetime.date(1995, 1, 1), vehicle_type="Bike",
+        date_of_birth=datetime.date(1995, 1, 1),
         national_identification_number=f"ACTNIN{suffix}", bank_name="Test Bank",
         account_number=f"666665{suffix}0", account_holder_name=f"Driver {suffix}",
-        is_approved=True, vehicle_model="Honda", license_plate="ABC-123", **extra,
+        **extra,
     )
 
 

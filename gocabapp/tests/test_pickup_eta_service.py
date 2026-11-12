@@ -7,9 +7,10 @@ from unittest.mock import MagicMock, patch
 from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase
 
-from gocabapp.services.pickup_eta_service import ARRIVED_KM, _traffic_ratio, compute_pickup_eta
+from gocabapp.services.pickup_eta_service import ARRIVED_KM, compute_pickup_eta
 
 _GMAPS_PATCH_TARGET = "gocabapp.services.pickup_eta_service._gmaps"
+_ESTIMATE_MINUTES_PATCH_TARGET = "gocabapp.services.pickup_eta_service.estimate_pickup_minutes"
 
 # Real Benin City coordinates, a few km apart — same city box used
 # elsewhere in this suite (distance_utils.CITY_BOUNDARIES["benin"]).
@@ -64,30 +65,46 @@ class ComputePickupEtaArrivalTests(TestCase):
 
 
 class TrafficRatioTests(TestCase):
+    """Goes entirely through the real public entry point, compute_pickup_eta
+    — not the private _traffic_ratio helper behind it, so a harmless
+    internal refactor (renaming it, inlining it) can't break these.
+    estimate_pickup_minutes is pinned to a fixed value so eta_min is a
+    precisely predictable number regardless of the real formula, which
+    isolates what's actually under test here: the traffic-ratio
+    calibration, not fare_pricing's distance-to-minutes math."""
+
     def setUp(self):
         cache.clear()
 
-    def test_disallowed_google_call_returns_the_neutral_ratio(self):
-        ratio = _traffic_ratio(201, *FAR_DRIVER, *PICKUP, base_minutes=10, allow_google_call=False)
-        self.assertEqual(ratio, 1.0)
+    def _ride(self, ride_id):
+        return _FakeRide(*PICKUP, ride_id=ride_id)
 
     def test_a_cached_ratio_is_reused_without_calling_google_again(self):
-        cache.set("pickup_eta_ratio_202", 1.7, 90)
-        with patch(_GMAPS_PATCH_TARGET) as mock_gmaps:
-            ratio = _traffic_ratio(202, *FAR_DRIVER, *PICKUP, base_minutes=10, allow_google_call=True)
-            mock_gmaps.assert_not_called()
-        self.assertEqual(ratio, 1.7)
-
-    def test_a_good_google_reading_computes_and_caches_the_ratio(self):
         fake_client = MagicMock()
         fake_client.distance_matrix.return_value = {
             "status": "OK",
             "rows": [{"elements": [{"status": "OK", "duration_in_traffic": {"value": 1200}}]}],  # 20 min
         }
-        with patch(_GMAPS_PATCH_TARGET, return_value=fake_client):
-            ratio = _traffic_ratio(203, *FAR_DRIVER, *PICKUP, base_minutes=10, allow_google_call=True)
-        self.assertEqual(ratio, 2.0)  # 20 actual minutes / 10 formula minutes
-        self.assertEqual(cache.get("pickup_eta_ratio_203"), 2.0)
+        ride = self._ride(301)
+        with patch(_ESTIMATE_MINUTES_PATCH_TARGET, return_value=10.0), \
+             patch(_GMAPS_PATCH_TARGET, return_value=fake_client):
+            first = compute_pickup_eta(ride, *FAR_DRIVER, allow_google_call=True)
+            second = compute_pickup_eta(ride, *FAR_DRIVER, allow_google_call=True)
+        self.assertEqual(fake_client.distance_matrix.call_count, 1)
+        self.assertEqual(first["eta_min"], second["eta_min"])
+
+    def test_a_good_google_reading_scales_the_eta_up(self):
+        fake_client = MagicMock()
+        fake_client.distance_matrix.return_value = {
+            "status": "OK",
+            "rows": [{"elements": [{"status": "OK", "duration_in_traffic": {"value": 1200}}]}],  # 20 min
+        }
+        ride = self._ride(302)
+        with patch(_ESTIMATE_MINUTES_PATCH_TARGET, return_value=10.0), \
+             patch(_GMAPS_PATCH_TARGET, return_value=fake_client):
+            result = compute_pickup_eta(ride, *FAR_DRIVER, allow_google_call=True)
+        # 20 real minutes vs. a 10-minute formula estimate -> ratio 2.0
+        self.assertEqual(result["eta_min"], 20)
 
     def test_an_extreme_reading_is_clamped_to_the_ratio_bounds(self):
         fake_client = MagicMock()
@@ -95,20 +112,30 @@ class TrafficRatioTests(TestCase):
             "status": "OK",
             "rows": [{"elements": [{"status": "OK", "duration_in_traffic": {"value": 6000}}]}],  # 100 min
         }
-        with patch(_GMAPS_PATCH_TARGET, return_value=fake_client):
-            ratio = _traffic_ratio(204, *FAR_DRIVER, *PICKUP, base_minutes=10, allow_google_call=True)
-        self.assertEqual(ratio, 3.0)  # clamped at _RATIO_MAX
+        ride = self._ride(303)
+        with patch(_ESTIMATE_MINUTES_PATCH_TARGET, return_value=10.0), \
+             patch(_GMAPS_PATCH_TARGET, return_value=fake_client):
+            result = compute_pickup_eta(ride, *FAR_DRIVER, allow_google_call=True)
+        # Raw ratio would be 10x (100 real minutes / 10 formula minutes) —
+        # clamped to the documented 3.0 ceiling before scaling the base.
+        self.assertEqual(result["eta_min"], 30)
 
-    def test_a_google_failure_falls_back_to_the_neutral_ratio_and_still_caches_it(self):
+    def test_a_google_failure_falls_back_to_the_formula_estimate_and_only_tries_once(self):
         """So a Google outage costs at most one failed call per ride, not
-        one per 15-second location ping."""
-        with patch(_GMAPS_PATCH_TARGET, side_effect=Exception("boom")):
-            ratio = _traffic_ratio(205, *FAR_DRIVER, *PICKUP, base_minutes=10, allow_google_call=True)
-        self.assertEqual(ratio, 1.0)
-        self.assertEqual(cache.get("pickup_eta_ratio_205"), 1.0)
+        one per 15-second location ping — confirmed across two calls."""
+        ride = self._ride(304)
+        with patch(_ESTIMATE_MINUTES_PATCH_TARGET, return_value=10.0), \
+             patch(_GMAPS_PATCH_TARGET, side_effect=Exception("boom")) as mock_gmaps:
+            first = compute_pickup_eta(ride, *FAR_DRIVER, allow_google_call=True)
+            second = compute_pickup_eta(ride, *FAR_DRIVER, allow_google_call=True)
+        self.assertEqual(first["eta_min"], 10)
+        self.assertEqual(second["eta_min"], 10)
+        self.assertEqual(mock_gmaps.call_count, 1)
 
     def test_a_sub_one_minute_base_estimate_skips_google_entirely(self):
-        with patch(_GMAPS_PATCH_TARGET) as mock_gmaps:
-            ratio = _traffic_ratio(206, *FAR_DRIVER, *PICKUP, base_minutes=0.5, allow_google_call=True)
+        ride = self._ride(305)
+        with patch(_ESTIMATE_MINUTES_PATCH_TARGET, return_value=0.5), \
+             patch(_GMAPS_PATCH_TARGET) as mock_gmaps:
+            result = compute_pickup_eta(ride, *FAR_DRIVER, allow_google_call=True)
             mock_gmaps.assert_not_called()
-        self.assertEqual(ratio, 1.0)
+        self.assertEqual(result["eta_min"], 1)  # max(1, ceil(0.5 * 1.0))
