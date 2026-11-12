@@ -89,10 +89,17 @@ jobs:
         # static/, staticfiles/ all live as siblings of these two
         # directories, never nested inside them, so --delete here can
         # never reach any of those regardless of what changes in the repo.
+        #
+        # __pycache__/*.pyc is excluded on both sides: those files get
+        # regenerated on the server by gocab-backend.service itself
+        # (running as a different system user than `deploy`), so rsync's
+        # --delete has no permission to unlink them — caught by a real
+        # deploy failing with "Permission denied (13)". Bytecode cache is
+        # disposable and shouldn't be synced or deleted by rsync at all.
         run: |
           RSYNC_SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no"
-          rsync -az --delete -e "$RSYNC_SSH" gocabapp/ deploy@${{ secrets.DEPLOY_HOST }}:/srv/gocab/gocabapp/
-          rsync -az --delete -e "$RSYNC_SSH" Gocabservices/ deploy@${{ secrets.DEPLOY_HOST }}:/srv/gocab/Gocabservices/
+          rsync -az --delete --exclude='__pycache__/' --exclude='*.pyc' -e "$RSYNC_SSH" gocabapp/ deploy@${{ secrets.DEPLOY_HOST }}:/srv/gocab/gocabapp/
+          rsync -az --delete --exclude='__pycache__/' --exclude='*.pyc' -e "$RSYNC_SSH" Gocabservices/ deploy@${{ secrets.DEPLOY_HOST }}:/srv/gocab/Gocabservices/
           rsync -az -e "$RSYNC_SSH" manage.py Pipfile Pipfile.lock deploy@${{ secrets.DEPLOY_HOST }}:/srv/gocab/
 
       - name: Install any new dependencies, migrate, restart
