@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import SlideToContinue from "../components/SlideToContinue";
 import Loader from "../components/Loader";
 
 export default function Home() {
@@ -33,7 +32,7 @@ export default function Home() {
   if (loading || user) return <Loader />;
 
   return (
-    <div className="safe-area-shell relative w-full max-w-[480px] mx-auto min-h-dvh bg-[#20241f] overflow-hidden flex flex-col text-slate-100">
+    <div className="relative w-full max-w-[480px] mx-auto min-h-dvh bg-[#20241f] flex flex-col text-slate-100">
       <div className="relative bg-[#8c978f] pt-10 pb-16 px-6 flex flex-col items-center flex-[1.3] justify-between">
         {/* Logo */}
         <div className="flex flex-col items-center z-10 pt-2">
@@ -89,13 +88,14 @@ export default function Home() {
           </p>
         </div>
 
-        <SlideToContinue
-          label="Continue"
-          successLabel={user ? "Welcome back! " : "Let's go "}
-          onComplete={() => navigate(destination)}
-        />
+        <button
+          type="button"
+          onClick={() => navigate(destination)}
+          className="w-full h-[62px] bg-[#1be451] text-neutral-900 rounded-full font-bold text-base shadow-xl active:scale-[0.98] transition-transform"
+        >
+          {user ? "Welcome back" : "Continue"}
+        </button>
 
-        
       </div>
     </div>
   );
